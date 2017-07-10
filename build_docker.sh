@@ -75,6 +75,8 @@ if [ -n "${IS_PUSH}" ]; then
 	docker login
 fi
 
+ORIGINAL_WORKING_DIRECTORY=$(pwd)
+
 if [ -n "$STAGING_DIR" ]; then
     GITHUB_DIR="tags/"
 
@@ -89,7 +91,9 @@ if [ -n "$STAGING_DIR" ]; then
     set -e
     GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/${REPO}/${PROJECT}.git ${STAGING_DIR}/${STAGING_CLONE_DIR}
     cd ${STAGING_DIR}/${STAGING_CLONE_DIR}
-    echo "Now in ${PWD}"
+    STAGING_ABSOLUTE_PATH=$(pwd)
+
+    echo "Now in $(pwd)"
         if [ ${PULL_REQUEST_NUMBER} ]; then
             GIT_FETCH_COMMAND="git fetch origin +refs/pull/${PULL_REQUEST_NUMBER}/merge"
             echo "${GIT_FETCH_COMMAND}"
@@ -98,8 +102,12 @@ if [ -n "$STAGING_DIR" ]; then
     GIT_CHECKOUT_COMMAND="git checkout ${GITHUB_DIR}${GITHUB_TAG}"
     echo "${GIT_CHECKOUT_COMMAND}"
     ${GIT_CHECKOUT_COMMAND}
+    if [ -z "${IS_NOT_RUN_UNIT_TESTS}" ] ; then
+        git lfs pull
+        chmod -R a+w ${STAGING_ABSOLUTE_PATH}/*
+        chmod a+w ${STAGING_ABSOLUTE_PATH}/
+    fi
 fi
-
 
 # Build
 echo "Building image to tag ${REPO_PRJ}:${GITHUB_TAG}..."
@@ -114,8 +122,8 @@ if [ -z "${IS_NOT_RUN_UNIT_TESTS}" ] ; then
 		REMOVE_CONTAINER_STRING=" "
 	fi
 
-	echo docker run ${REMOVE_CONTAINER_STRING} -t ${REPO_PRJ}:${GITHUB_TAG} bash /root/run_unit_tests.sh
-	docker run ${REMOVE_CONTAINER_STRING} -t ${REPO_PRJ}:${GITHUB_TAG} bash /root/run_unit_tests.sh
+	echo docker run ${REMOVE_CONTAINER_STRING} -v ${STAGING_ABSOLUTE_PATH}/src/test/resources:/testdata -t ${REPO_PRJ}:${GITHUB_TAG} bash /root/run_unit_tests.sh
+	docker run ${REMOVE_CONTAINER_STRING} -v ${STAGING_ABSOLUTE_PATH}/src/test/resources:/testdata -t ${REPO_PRJ}:${GITHUB_TAG} bash /root/run_unit_tests.sh
 	echo " Unit tests passed..."
 fi
 
@@ -132,4 +140,7 @@ if [ -n "${IS_PUSH}" ]; then
 else
 	echo "Not pushing to dockerhub"
 fi
+
+cd ${ORIGINAL_WORKING_DIRECTORY}
+rm -Rf ${STAGING_DIR}/${STAGING_CLONE_DIR}
 
