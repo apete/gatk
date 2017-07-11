@@ -272,6 +272,12 @@ public class VariantRecalibrator extends MultiVariantWalker {
             optional=true)
     private boolean outputModel = false;
 
+    @Argument(fullName="sample_every_Nth_variant",
+            shortName = "sampleEvery",
+            doc="If specified, the variant recalibrator will use only a subset of variants consisting of every Nth variant where N is specified by this argument",
+            optional=true)
+    private int sampleMod = 1;
+
     @Argument(fullName="model_file",
             shortName = "modelFile",
             doc="A GATKReport containing the positive and negative model fits",
@@ -325,6 +331,7 @@ public class VariantRecalibrator extends MultiVariantWalker {
     private final VariantRecalibratorEngine engine = new VariantRecalibratorEngine( VRAC );
     private ExpandingArrayList<VariantDatum> reduceSum = new ExpandingArrayList<>(2000);
     private List<ImmutablePair<VariantContext, FeatureContext>> variantsAtLocus = new ArrayList<>();
+    private int counter = 0;
 
     //---------------------------------------------------------------------------------------------------------------
     //
@@ -403,7 +410,10 @@ public class VariantRecalibrator extends MultiVariantWalker {
         if (variantLocusChanged(vc)) {
             consumeQueuedVariants();
         }
-        variantsAtLocus.add(new ImmutablePair<>(vc, featureContext));
+        if (counter % sampleMod == 0)
+            variantsAtLocus.add(new ImmutablePair<>(vc, featureContext));
+        counter++;
+
     }
 
     // Check to see if the start locus for this variant is different from the
