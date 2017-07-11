@@ -185,6 +185,10 @@ public class VariantRecalibratorIntegrationTest extends CommandLineProgramTest {
         spec.executeTest("testVariantRecalibratorIndel"+  inputFile, this);
     }
 
+    private final String modelReportFilename = publicTestDir + "/snpSampledModel.report";
+    private final String modelReportRecal = getLargeVQSRTestDataDir() + "expected/snpSampledRecal.vcf";
+    private final String modelReportTranches = getLargeVQSRTestDataDir() + "expected/snpSampledTranches.txt";
+
     @Test
     public void testVariantRecalibratorSampling() throws IOException {
         final String inputFile = getLargeVQSRTestDataDir() + "phase1.projectConsensus.chr20.1M-10M.raw.snps.vcf";
@@ -199,12 +203,37 @@ public class VariantRecalibratorIntegrationTest extends CommandLineProgramTest {
                 " --trustAllPolymorphic" + // for speed
                 " --output %s" +
                 " -tranchesFile %s" +
+                " --output_model " + modelReportFilename +
                 " -mode SNP -mG 3" +  //reduce max gaussians so we have negative training data with the sampled input
                 " -sampleEvery 2" +
                 " --addOutputVCFCommandLine false",
                 Arrays.asList(
-                        getLargeVQSRTestDataDir() + "expected/snpSampledRecal.vcf",
-                        getLargeVQSRTestDataDir() + "expected/snpSampledTranches.txt"));
+                        modelReportRecal,
+                        modelReportTranches));
+        spec.executeTest("testVariantRecalibratorIndel"+  inputFile, this);
+    }
+
+    @Test(dependsOnMethods = {"testVariantRecalibratorSampling"})
+    public void testVariantRecalibratorModelInput() throws IOException {
+        final String inputFile = getLargeVQSRTestDataDir() + "phase1.projectConsensus.chr20.1M-10M.raw.snps.vcf";
+
+        final IntegrationTestSpec spec = new IntegrationTestSpec(
+                " --variant " + inputFile +
+                        " -L 20:1,000,000-10,000,000" +
+                        " --resource known,known=true,prior=10.0:" + getLargeVQSRTestDataDir() + "dbsnp_132_b37.leftAligned.20.1M-10M.vcf" +
+                        " --resource truth_training1,truth=true,training=true,prior=15.0:" + getLargeVQSRTestDataDir() + "sites_r27_nr.b37_fwd.20.1M-10M.vcf" +
+                        " --resource truth_training2,training=true,truth=true,prior=12.0:" + getLargeVQSRTestDataDir() + "Omni25_sites_1525_samples.b37.20.1M-10M.vcf" +
+                        " -an QD -an HaplotypeScore -an HRun" +
+                        " --trustAllPolymorphic" + // for speed
+                        " --output %s" +
+                        " -tranchesFile %s" +
+                        " --input_model " + modelReportFilename +
+                        " -mode SNP -mG 3" +  //reduce max gaussians so we have negative training data with the sampled input
+                        " -sampleEvery 2" +
+                        " --addOutputVCFCommandLine false",
+                Arrays.asList(
+                        modelReportRecal,
+                        modelReportTranches));
         spec.executeTest("testVariantRecalibratorIndel"+  inputFile, this);
     }
 
