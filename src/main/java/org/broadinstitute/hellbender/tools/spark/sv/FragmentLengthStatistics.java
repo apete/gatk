@@ -38,6 +38,10 @@ public final class FragmentLengthStatistics {
     public float getNegativeMAD() { return negativeMAD; }
     public float getPositiveMAD() { return positiveMAD; }
 
+    public int getMaxNonOutlierFragmentSize() {
+        return median + ((int) getPositiveMAD()) * 3;
+    }
+
     public float getZishScore( final int fragmentSize ) {
         if ( fragmentSize < 0 ) {
             throw new GATKException("negative fragment size");

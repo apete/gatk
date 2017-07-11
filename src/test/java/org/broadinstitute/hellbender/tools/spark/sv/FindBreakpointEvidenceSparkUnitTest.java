@@ -23,7 +23,7 @@ import static org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDi
 
 public final class FindBreakpointEvidenceSparkUnitTest extends BaseTest {
     private static final SVInterval[] testIntervals =
-            { new SVInterval(1, 33140717, 33141485), new SVInterval(1, 33143109, 33143539) };
+            { new SVInterval(1, 33140493, 33141737), new SVInterval(1, 33142830, 33143485) };
 
     private final String toolDir = getToolTestDataDir();
     private final String readsFile = toolDir+"SVBreakpointsTest.bam";
