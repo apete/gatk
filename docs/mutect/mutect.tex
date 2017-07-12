@@ -236,4 +236,38 @@ P({\rm germline}) = \frac{(1)}{(1) + (2) + (3)} = \frac{\left(2f(1-f) + f^2 \rig
 
 To filter, we set a threshold on this posterior probability.
 
+\section{Calculating Contamination}
+Below, we present the GATK's fast, simple, and accurate method for calculating the contamination of a sample without a matched normal and regardless of the number of contaminating samples that remains accurate even when the sample has a lot of copy number variation.
+
+The inputs to our tool are a bam file and a list of common variants with their allele frequencies.  The basic idea is simply to count ref reads at hom alt sites and subtract the number of ref reads expected from sequencing error to obtain the number of ref reads contaminating these hom alt sites.  Finally, we use the allele frequencies to account for the fact that some contaminating reads have the alt allele.  The only minor subtlety is in distinguishing hom alt sites from loss of heterozygosity events, which is not difficult to achieve as we describe below.
+
+Suppose we have a set $\mathbb{H}$ of hom alt sites.  Let $N_{\rm ref}$ be the total number of ref reads at these sites.  We can decompose $N_{\rm ref}$ as follows:
+\begin{align}
+N_{\rm ref} = N_{\rm error} + N_{\rm contamination}, \label{decomposition}
+\end{align}
+where $N_{\rm error}$  and $N_{\rm contamination}$ are as their names suggest.  We can obtain $N_{\rm ref}$ by counting reads, and we estimate $N_{\rm error}$ as follows.  Suppose, WLOG, that the ref allele is A and the alt is C.  Then, assuming that all substitution errors are equally likely, $N_{\rm ref}$ is approximately half the number of Gs and Ts.  This is, of course, not a perfect assumption for any one site, but on average over all the sites in $\mathbb{H}$ it is very good.
+
+Next we take the expectation of both sides of Equation \ref{decomposition} to obtain
+\begin{align}
+\ave{N_{\rm ref} - N_{\rm error}} = \sum_{s \in \mathbb{H}} \ave{N_{\rm contamination}^s} \times \ave{\rm fraction~of~contaminant~reads~that~are~ref},
+\end{align}
+where $N_{\rm contamination}^s$ is the number of contaminant reads at site $s$, the expected value of which is the depth $d_s$ at site $s$ times the contamination.  The expected fraction of contaminant reads that are ref is one minus the alt allele frequency $f_s$.  Crucially, this fact is independent of how many contaminating samples there are.  Thus we have
+\begin{align}
+\ave{N_{\rm ref} - N_{\rm error}} = {\rm contamination} \sum_{s \in \mathbb{H}} d_s (1 - f_s)
+\end{align}
+and obtain the estimate
+\begin{align}
+{\rm contamination} \approx \frac{\ave{N_{\rm ref} - N_{\rm error}}}{\sum_{s \in \mathbb{H}} d_s (1 - f_s)}
+\end{align}
+Let us now roughly estimate the error bars on this result. SInce most alt alleles are not too common (by default, the tool looks only at sites with $f_s < 0.2$), we can calculate the error bars under the assumption that all contaminant reads are ref.  Then the number of contaminating reads is a binomial distribution with the number of trials equal $\sum_{s \in \mathbb{H}} d_s$ and success probability equal to the contamination.  Our contamination estimate is the number of proportion of successes drawn from this binomial distribution.  Plugging in the variance of a binomial distribution, we find:
+\begin{align}
+{\rm var}({\rm contamination}) \approx {\rm contamination} \times (1 - {\rm contamination}) \frac{\sum_{s \in \mathbb{H}} d_s}{(\sum_{s \in \mathbb{H}} d_s)^2}
+\end{align}
+For the usual case of low contamination, we obtain a relative error
+\begin{align}
+\frac{ {\rm std}({\rm contamination})}{\rm contamination} \approx \left( \sum_{s \in \mathbb{H}} d_s \right)^{-1/2} = \left( {\rm average~depth} \times {\rm number~of~hom~alt~sites} \right)^{-1/2}
+\end{align}
+The number of hom alt sites in an exome is easily several hundred, so the uncertainty in our estimate is quite small.  In fact, for an average coverage of 30 reads and looking only at exonic hom alts in chromosome 1, we expect to find 50 or so hom alts, which yields a fairly small relative error.
+
+It remains to describe how we determine which sites are hom alt.  Our simple heuristic is to consider only sites with sufficient depth and fraction of alt reads, say 80 percent.  (If this measure fails to find enough hom alt sites, we can conclude that contamination is greater than 20 percent, which is so large as to make the sample worthless for somatic variant calling).  We must additionally reject apparent hom alt sites that are actually het sites with deletion of the ref allele.  We do this by looking for copy number variation and loss of heterozygosity in the vicinity of this site.  To find sites with anomalous copy number, we compute the average depth smoothed over a scale of one megabase and compare it to the average depth of the sample as a whole and reject sites that show evidence of a deletion.  To find loss of heterozygosity, we obtain ref and alt read counts of common SNPs within a megabase and compare the number of hets found to that expected based on the known allele frequencies.  If too few hets are found, we reject the site.  These two heuristics suffice to screen out false hom alts.
 \end{document}
