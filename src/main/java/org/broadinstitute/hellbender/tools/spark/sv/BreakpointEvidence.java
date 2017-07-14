@@ -50,7 +50,7 @@ public class BreakpointEvidence {
     /**
      * Returns the strand of the evidence, if applicable; otherwise null.
      */
-    public Boolean isForwardStrand() { return null; };
+    public Boolean isForwardStrand() { return null; }
 
     /**
      * Returns true if this piece of evidence specifies a possible distal target for the breakpoint.
