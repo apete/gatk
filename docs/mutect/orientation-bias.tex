@@ -14,14 +14,17 @@
 \usepackage[colorinlistoftodos]{todonotes}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 \usepackage{bm}
+\usepackage{amsfonts}
 
-
+% Note the substitute command needs to be enclosed in double brackets
+% otherwise the bold font spills out of the command
 \newcommand{\vzero}{{\bf 0}}
 \newcommand{\vI}{{\bf I}}
 \newcommand{\vb}{{\bf b}}
 \newcommand{\vd}{{\bf d}}
 \newcommand{\vf}{{\bf f}}
 \newcommand{\vc}{{\bf c}}
+\newcommand{\vp}{{\bf p}}
 \newcommand{\vv}{{\bf v}}
 \newcommand{\vz}{{\bf z}}
 \newcommand{\vn}{{\bf n}}
@@ -35,9 +38,12 @@
 \newcommand{\vSigma}{{\bf \Sigma}}
 \newcommand{\vlambda}{{\bf \lambda}}
 \newcommand{\vpi}{{\bm \pi}}
+\newcommand{\vtheta}{{\bm \theta}}
 \newcommand{\valpha}{{\bm{\alpha}}}
 \newcommand{\vLambda}{{\bf \Lambda}}
 \newcommand{\vA}{{\bf A}}
+\newcommand{\E}{\mathbb{E}}
+
 
 
 \title{Mutect2 Orientation Artifact Filter}
@@ -109,25 +115,79 @@ Why wouldn't this artifact appear in a F2R1 read? Well, to have an F2R1 read
 \subsection{How PCR multplies inserts with oxog}
 
 
-
-
-
 \section{The generative model}
-The probabilistic model consists of the following random variables:
+\section{The graphical model}
+The probabilistic model consists of the following random variables. For each reference context $i$ - that is, for every $k$-mer in the reference - the discrete latent variable $z$ represents the state of the site with respect to the degree of orientation-bias 
 
-\begin{itemize}
-\item The reference sequence context $C$ is the distribution of a k-mer centered around the variant. It'll be a categorical variable over $4^k$ possible k-mers.
-\item $Z$ is a latent variable that represents the presence of an artifact: $Z \in \{ \text{artifact}, \text{no artifact} \}$
-\item $f$ is the allele fraction at the site. $P(f | Z = \text{artifact})$ will have most of probability density in $[0, 0.2]$, whereas $p(f | Z = \text{no artifact})$ will have a wider spread over $[0, 0.5]$. It probably makes sense to use the beta distribution.
-\item $A_i$ is a binary variable for the allele in read $i$; $A \in \{ REF, ALT \}$. $A \sim \mathrm{Bernoulli}(f)$.
-\item $O_i$ is the orientation of the read $i$; $O_i \in \{ F1R2, F2R1 \}$. $P(O = F2R1 | Z = art, C = \text{CCG}, A = ALT)$ should be high, say $0.999$. That is, $C \mapsto A$ mutation in the middle $C$ in the presence of oxog artifact should be observed only in $F2R1$. On the other hand, when  $C = CGG$, the middle $G$ is likely to oxidize and, provided that $Z = art$, we have near certainty that the ALT read occurs in $F1R2$; that is, $P(O = F1R2 | Z = art, C = \text{CGG}, A = ALT) \approx 1$.
-\end{itemize}
+\begin{equation}
+z \in \{ \mathrm{F1R2}, \mathrm{F2R1}, \mathrm{Balanced Hom Ref}, \mathrm{ Balanced Het }, \mathrm{ Balanced Hom Var } \}
+\end{equation}
+
+$z \sim \mathrm{Categorical}(\pi_c)$, where $\pi_{ck}$ is the context dependent prior probability of kth component $Z$ and thus satisfies $\sum_k \pi_{ck} = 1$, where $k \in [1, |Z|]$. The number of ALT allele at the site, $m$, depends on the state $z$. We explicitly model the number of ALT alleles because its dependence on $z$ encapsulates our knowledge that, when orientation bias is present, we \textit{always} have some number of (artifactual) ALT reads at the site. In other words, if we do not observe ALT reads at all (i.e. $z = \mathrm{Hom ref}$), we cannot have orientation bias at the site. $m|z \sim \mathrm{Binom(p_z)}$. We then model the number of $F1R2$ reads among the $m$ ALT reads as $x|m \sim \mathrm{Binom(\theta_z)}$, parameterized by the the parameter $\theta$ that depends on the state $z$. 
 
 \begin{figure}
 \centering
 \includegraphics[width=0.3\textwidth]{pgm.png}
 \caption{\label{fig:pgm} The probabilistic graphical model}
 \end{figure}
+
+What does the model know? What doesn't it know? 
+
+%%%
+\subsection{EM algorithm}
+We may use the EM algorithm to estimate the hyperparameters $\vpi$, $\vp$. We can then compute the posterior probability of the latent variable $z$ to determine whether a variant is an orientation artifact and thus should be filtered.
+
+\subsubsection{E step}
+In the E step, we compute the responsibility of the $k$th mixture component $\gamma_{nk} = p(z_k | x_n, m_n)$, which is the posterior probability of $k$th component of $z$ given observable variables $x_n$ and $m_n$. By Bayes rule we have
+
+\begin{align}
+\gamma^*_{nk} &\propto p(z_{k} | x_n) \\
+		        &\propto p(z_{k}) p(m_n | z_k, p_{z} ) p(x_n | m_n ) \\
+		        &= \pi_k  \{ p_{z}^{m_n} (1-p_k)^{M - m_n} \} \{ \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} \} \\
+\end{align}
+
+where $M$ is the number of reads, both ALT and REF, at site $n$, and the asterisk over $\gamma^*_{nk}$ denotes that the responsibility is not normalized and thus is not a valid probability. We normalize each responsibility by dividing by the sum, as follows
+
+\begin{align}
+\gamma_{nk} = \frac{\gamma^*_{nk}}{\sum_{k'} \gamma^*_{nk'}}
+\end{align}
+
+\subsubsection{M step}
+In the M step, we compute the expectation of the complete-data log likelihood with respect to the posterior distribution over $z$ (so $\E$ stands for $\E_{z \sim p(z|x,m)}$). Thus,
+
+\begin{align}
+\E [ \ln p(X, M , Z | \vpi, \vp, \vtheta) ] &= \E [ \ln \prod_{n = 1}^{N}  p(Z) p(M | Z, p_{z} ) p(X | M ) ] \\
+							&= \E [ \ln \prod_{n = 1}^{N} \{ \prod_{k = 1}^{K} \pi_k^{z_{kn}} \} \{ \prod_{k = 1}^{K} ( p_k^{m_n} (1-p_k)^{M - m_n} ) ^{z_{nk}} \} ( \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} ) ] \notag \\
+							&= \E [ \ln \prod_{n = 1}^{N} \{ \prod_{k = 1}^{K} ( \pi_k  p_{k}^{m_n} (1-p_k)^{M - m_n} ) ^{z_{nk}} \} ( \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} ) ] \\
+							&= \E [ \sum_{n = 1}^{N} \sum_{k = 1}^{K} z_{nk} \{ \ln \pi_k  + m_n \ln p_k + (M - m_n) \ln (1-p_k) \} + \notag \\
+							&\phantom{---------------} x_n \ln \theta_k + (m_n - x_n) \ln (1 - \theta_k) ] \\
+							&= \sum_{n = 1}^{N} \sum_{k = 1}^{K} \gamma_{nk} \{ \ln \pi_k  + m_n \ln p_k + (M - m_n) \ln (1-p_k) \} + \notag \\
+							&\phantom{---------------} x_n \ln \theta_k + (m_n - x_n) \ln (1 - \theta_k)
+\end{align} 
+
+where $K = |Z|$, and $X$ is the design matrix where each of $N$ row is $x_n$, and $\E z_{nk} = \gamma_{nk}$. We now take the derivative with respect to $\theta_k, p_k, \pi_k$ and set each equation to 0, which yields:
+
+\begin{align}
+\frac{\partial}{\partial \theta_k} &= \sum_n \frac{x_n}{\theta_k} - \frac{m_n - x_n}{1- \theta_k} \\
+					      &= \frac{N_k \bar{x}}{\theta_k} + \frac{N \bar{m} - N \bar{x}}{1- \theta_k} = 0
+\end{align}
+
+solving for $\theta_k$ we get
+
+\begin{align}
+\theta_k = 
+\end{align}
+
+where we defined
+
+START HERE: We definitely want $\theta$ to depend on $z$ directly.
+
+\begin{align}
+N_k      &= \sum_n \gamma_{nk} \\
+\bar{x}_k  &= \frac{1}{N_k} \sum_n \gamma_{nk} x_n \\
+\bar{m}_k &= \frac{1}{N_k} \sum_n \gamma_{nk} m_n 
+\end{align}
+
 
 %%%%%%%%%%
 \section{July 14th meeting with David}
@@ -155,7 +215,7 @@ When mean field theory is used, the conjugacy across nodes is not crucial. Conju
 
 $m$ could be binomial. Or it could be beta-binomial. Beta-binomial has larger spread when $n$ is large or something. 
 
-At one point I suggested that $m|z = no bias$ be a mixture, between somatic variant (where $m$ can be large) or hom ref (where $m$). Instead I could just add more values to the $z$ variable such that $z \in \{ \text{F1R2}, \text{F2R1}, \text{Balanced Hom Ref}, \text{Balanced Somatic}, \text{Germline} \}$.
+At one point I suggested that $m|z = \mathrm{no bias}$ be a mixture, between somatic variant (where $m$ can be large) or hom ref (where $m$). Instead I could just add more values to the $z$ variable such that $z \in \{ \text{F1R2}, \text{F2R1}, \text{Balanced Hom Ref}, \text{Balanced Somatic}, \text{Germline} \}$.
 
 
 
