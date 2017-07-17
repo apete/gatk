@@ -1,0 +1,163 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page since and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{bm}
+
+
+\newcommand{\vzero}{{\bf 0}}
+\newcommand{\vI}{{\bf I}}
+\newcommand{\vb}{{\bf b}}
+\newcommand{\vd}{{\bf d}}
+\newcommand{\vf}{{\bf f}}
+\newcommand{\vc}{{\bf c}}
+\newcommand{\vv}{{\bf v}}
+\newcommand{\vz}{{\bf z}}
+\newcommand{\vn}{{\bf n}}
+\newcommand{\vm}{{\bf m}}
+\newcommand{\vG}{{\bf G}}
+\newcommand{\vQ}{{\bf Q}}
+\newcommand{\vM}{{\bf M}}
+\newcommand{\vW}{{\bf W}}
+\newcommand{\vX}{{\bf X}}
+\newcommand{\vPsi}{{\bf \Psi}}
+\newcommand{\vSigma}{{\bf \Sigma}}
+\newcommand{\vlambda}{{\bf \lambda}}
+\newcommand{\vpi}{{\bm \pi}}
+\newcommand{\valpha}{{\bm{\alpha}}}
+\newcommand{\vLambda}{{\bf \Lambda}}
+\newcommand{\vA}{{\bf A}}
+
+
+\title{Mutect2 Orientation Artifact Filter}
+\author{Takuto Sato}
+
+
+\begin{document}
+\maketitle
+
+\section{Terminology}
+Clearly define:
+Forward strand
+Reverse strand
+
+\section{Intro}
+We will first discuss how orientation bias arises during sequencing. To do so we will go over Kap ICE library construction (also known as library prep) and a bit of Illumina sequencing. We will abbreviate and abstract the steps along the way to befit our purpose, which again is to understand how orientation bias arises during sequencing. The sequencing protocol described below is Kapa ICE exome. 
+
+We first take vial full of DNA molecules and shear them into fragments. The resulting fragments of DNA, as depicted in the Figure \ref{fig:oxog}, are called \textit{inserts}. Without loss of generality we assume that the strand shown on top in blue is the \textit{forward} strand; that is, read from 5' end to 3' end, bases in the blue strand map directly to the reference. The strand in orange, conversely, is a \textit{reverse} strand, as it is a reverse complement of the reference when read from 5' to 3' end.
+
+Few years back, folks at GP found that high-power acoustic shearing (as opposed to enzymatic shearing as in Nexome Library Construction) may cause guanine (G) in the insert to oxidize. The oxidized G may base-pair with adenine (A) in addition to the regular cytosine (C). The oxidized G is depicted as a G* with an asterisk in the figures; thus the forward strand at the top of the figure contains an oxidized G near the 5' end.
+
+Next in library prep we add adapters to the double-stranded inserts. In ICE Kapa Exome protocol, we only use one kind of adapter, shown as red and green fragments in Figure \ref{fig:oxog}, and this one type of (double-stranded) adapter attaches to both sides of the insert. To reiterate, the adapters on the left and right side are identical, but, due to directionality of the DNA molecule, they are flipped. We call a DNA insert with adapters attached a \text{library}. To distinguish them from the libraries created in subsequent PCR, we call this insert an \textit{original library}, in the sense that they are not PCR duplicates of the DNA.
+
+Next we denature the original library and run PCR. PCR replicates of the forward strand are shown on the bottom left corner in the figure. Note that during PCR G* in the forward strand base paired with A, which, after another round of PCR, created a third duplicate with a T in place of the original G. PCR replicates the reverse strand, shown in deep orange, faithfully and thus we get only one type of PCR duplicate\footnote{in reality this is unlikely. But since we are talking about an idealized, abstracted world anyway, we are free to suppose that this is the case}. 
+
+Now we pour the libraries on the flowcell, as detailed in Figure \ref{fig:flowcell}. 
+
+
+%%%%%
+ 
+
+Couple things to note about the adapters; adapters are not symmetric. That is, once adapter is ligated, the two strands in the double stranded insert molecule behave differently. Namely, the way adapter is ligated to the DNA decides which strand, forward or reverse, will be sequenced first. This means that we can sequence the same molecule two different ways, depending on how the adapter is ligated; read the forward strand first, or read the reverse strand first. This happens at random. We mark the read pair in the former case to have F1R2 orientation and the latter F2R1. For the adapter ligation happens at random, we should see about an equal amount of F1R2 and F2R1 reads. For a fixed insert, the way adapter is ligated does not affect which sequences are read. 
+
+Orientation bias is a form of sequencing artifact in which the alternate allele occurs exclusively in F1R2 reads or F2R1 reads. Since the orientation of reads should be balanced - as we have no reason to believe that the adapter prefers to ligate one way over the other - the skew in read orientation e.g. evidence for SNP all comes from F1R2 reads leads us to suspect the call.
+
+A similar but different mode of artifact is strand bias. Strand bias is in essence a bias in choosing the DNA insert (e.g. at the end of a bait). As mentioned previously, fixing an insert fixes which part of the insert is read, as well as how these reads map to the reference (i.e. forward or reverse). (NOTE: this is not specifically the bias that we are worried about, but rather this explains why at the end of bait intervals we have more reads, ref or alt, in one direction over the other). (Here comes the more relevant point) we can imagine that in certain reference contexts reading in one direction is harder than the doing so in the other direction. For instance, in the reference context 5'-AAAAGTACG-3', reading from the left one must read a bunch of A's, which we know is difficult and confusing to the machine, whereas reading from the right (on the other strand) is easier. Here, one can imagine the case where the sequencer makes an error and introduces a SNP only when it reads the sequence left to right. 
+
+At a given locus, whether the read overlapping the locus is a reverse or forward read is a function of the position of the insert relative to the reference. That is, once you fix a locus and an insert that overlaps it, you know whether the read that overlaps the locus will be reverse or forward. Fixing a locus and an insert does not give you any information about the read orientation. It may be F1R2 or R2F1, 
+
+We then ligate adapters to this double stranded DNA. The way we 
+
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{oxog.pdf}
+  \caption{Library }
+  \label{fig:oxog}
+\end{figure}
+
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{quadrants.pdf}
+  \caption{(Top) We may divide the original library into quadrants and consider individually the cases where the oxoG takes place in each quadrant. (Bottom, top left) Oxog in the first quadrant (I). (Bottom, top right) Oxog in the second quadrant (II). (Bottom, bottom right) third quadrant (III) and (Bottom, bottom left) fourth quadrant (IV) }
+  \label{fig:quadrants}
+\end{figure}
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{flowcell.pdf}
+  \caption{(Left) By virtue of the 3' end of the original adapter (in deep red) containing sequence complementary to the oligo tethered to the flow cell (P7), the strands in the original library, not the strands filled in by PCR, will be read first. That is, the sequencer synthesizes and fluoresces the bases in the original library first. Here, Read1 will read a T in the forward strand, where the reference has G. Thus the read will have a G -> T substitution. }
+  \label{fig:flowcell}
+\end{figure}
+
+
+\section{Oxog}
+
+Oxog, for our purposes, is a process in which guanine (G-base) is oxidized and is able to base pair with adenine (A) instead of the usual cytosine (C). We know that this takes place somewhere in the process of sequencing the DNA in the lab. Suppose that an adapter-ligated DNA insert is oxidized to oxoG. This may happen on a forward strand or on a reverse strand. Consider the case in which it occurs in the forward strand, call this $x$. When we sequence $x$, it gets ligate to the oligo tethered to the flow cell, and we base pair the rest. At the end we get the reverse complement of $x$, call it $x'$, tethered to the flowcell. Thanks to the oxidized $G$ in $x$, $x'$ contains an $A$ where it would normally have a $C$. Now we bind the primer to the read 1 primer binding site in $x'$, and we read off the bases. Where we should have read $G$, we will read a $T$. An artifact. Notice that we read the forward read first, so this read is F1R2.
+
+Why wouldn't this artifact appear in a F2R1 read? Well, to have an F2R1 read
+
+\subsection{How PCR multplies inserts with oxog}
+
+
+
+
+
+\section{The generative model}
+The probabilistic model consists of the following random variables:
+
+\begin{itemize}
+\item The reference sequence context $C$ is the distribution of a k-mer centered around the variant. It'll be a categorical variable over $4^k$ possible k-mers.
+\item $Z$ is a latent variable that represents the presence of an artifact: $Z \in \{ \text{artifact}, \text{no artifact} \}$
+\item $f$ is the allele fraction at the site. $P(f | Z = \text{artifact})$ will have most of probability density in $[0, 0.2]$, whereas $p(f | Z = \text{no artifact})$ will have a wider spread over $[0, 0.5]$. It probably makes sense to use the beta distribution.
+\item $A_i$ is a binary variable for the allele in read $i$; $A \in \{ REF, ALT \}$. $A \sim \mathrm{Bernoulli}(f)$.
+\item $O_i$ is the orientation of the read $i$; $O_i \in \{ F1R2, F2R1 \}$. $P(O = F2R1 | Z = art, C = \text{CCG}, A = ALT)$ should be high, say $0.999$. That is, $C \mapsto A$ mutation in the middle $C$ in the presence of oxog artifact should be observed only in $F2R1$. On the other hand, when  $C = CGG$, the middle $G$ is likely to oxidize and, provided that $Z = art$, we have near certainty that the ALT read occurs in $F1R2$; that is, $P(O = F1R2 | Z = art, C = \text{CGG}, A = ALT) \approx 1$.
+\end{itemize}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.3\textwidth]{pgm.png}
+\caption{\label{fig:pgm} The probabilistic graphical model}
+\end{figure}
+
+%%%%%%%%%%
+\section{July 14th meeting with David}
+
+When building a model, we'd like to know what information the model knows about. The previous model knew that 
+
+\begin{itemize}
+\item the probability of orientation bias depends on context
+\item if orientation bias, most \underline{alt} reads have one or the other orientation
+\end{itemize}
+
+But the model did not know, crucially, that if there's orientation bias, there must be some alt reads. Since we were looking at sites that have alt reads, the model didn't know 
+
+We then decided to add the variable $m$ to the model.  Once the model was updated, we went over different scenarios: what would happen if 
+\begin{itemize}
+\item $n = 100, m = 10, x = 5$ 
+\item $n = 100, m = 1, x = 1$
+\item $n = 100, m = 0, x = 0$
+\end{itemize}
+
+How does each part of the model vote, so to speak, for or against such data? The different components are $p(m|z), p(x|m), p(z | \pi)$. The first case rules 
+When the later likelihoods don't favor one of the other, the final vote falls on $p(z | \pi)$ which, assuming we already have the hyperparameters learned over all sites, uses the prior across all sites to vote one way or another. That is, when data is not very informative, when it doesn't tell us one way or another, we use the prior knowledge to make the decision, which makes sense.
+
+When mean field theory is used, the conjugacy across nodes is not crucial. Conjugacy between immediate neighbors makes life easier.
+
+$m$ could be binomial. Or it could be beta-binomial. Beta-binomial has larger spread when $n$ is large or something. 
+
+At one point I suggested that $m|z = no bias$ be a mixture, between somatic variant (where $m$ can be large) or hom ref (where $m$). Instead I could just add more values to the $z$ variable such that $z \in \{ \text{F1R2}, \text{F2R1}, \text{Balanced Hom Ref}, \text{Balanced Somatic}, \text{Germline} \}$.
+
+
+
+
+\end{document}
