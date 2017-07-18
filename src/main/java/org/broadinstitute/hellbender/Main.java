@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender;
 import com.google.cloud.storage.StorageException;
 import htsjdk.samtools.util.StringUtil;
 import org.aeonbits.owner.ConfigCache;
+import org.aeonbits.owner.ConfigFactory;
 import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.hellbender.cmdline.ClassFinder;
 import org.broadinstitute.barclay.argparser.CommandLineException;
@@ -193,7 +194,7 @@ public class Main {
      * @param args Command-line arguments passed to this program.
      * @return The name of the configuration file for this program or {@code null}.
      */
-    private String getConfigFilenameFromArgs( ArrayList<String> args ) {
+    private String getConfigFilenameFromArgs( final ArrayList<String> args ) {
 
         String configFileName = null;
 
@@ -223,9 +224,13 @@ public class Main {
         return configFileName;
     }
 
-    private MainConfig getConfiguration(final String configFileName) {
-
-        final MainConfig mainConfig;
+    /**
+     * Initializes and returns the configuration as specified by {@code configFileName}
+     * Also caches this configuration in the {@link ConfigCache} for use elsewhere.
+     * @param configFileName The name of the file from which to initialize the configuration
+     * @return The configuration instance implementing {@link MainConfig} containing any overrides in the given file.
+     */
+    private MainConfig getAndInitializeConfiguration(final String configFileName) {
 
         // Get a place to store our properties:
         final Properties userConfigFileProperties = new Properties();
@@ -246,7 +251,10 @@ public class Main {
             }
         }
 
-        // Return our configuration:
+        // Cache and return our configuration:
+        // NOTE: The configuration will be stored in the ConfigCache under the key MainConfig.class.
+        //       This means that any future call to getOrCreate for this MainConfig.class will return
+        //       Not only the configuration itself, but also the overrides as specified in userConfigFileProperties
         return ConfigCache.getOrCreate(MainConfig.class, userConfigFileProperties);
     }
 
@@ -267,7 +275,7 @@ public class Main {
         final String configFileName = getConfigFilenameFromArgs( argArrayList );
 
         // Get our config file:
-        MainConfig mainConfig = getConfiguration(configFileName);
+        MainConfig mainConfig = getAndInitializeConfiguration(configFileName);
 
         // To start with we inject our system properties to ensure they are defined for downstream components:
         injectSystemPropertiesFromConfig(mainConfig);
