@@ -10,6 +10,7 @@ import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.VCFHeaderLine;
 import htsjdk.variant.vcf.VCFSimpleHeaderLine;
+import org.aeonbits.owner.ConfigCache;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLinePluginDescriptor;
@@ -26,6 +27,7 @@ import org.broadinstitute.hellbender.transformers.ReadTransformer;
 import org.broadinstitute.hellbender.utils.SequenceDictionaryUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.config.MainConfig;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -34,6 +36,8 @@ import org.broadinstitute.hellbender.utils.reference.ReferenceUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -75,7 +79,7 @@ public abstract class GATKTool extends CommandLineProgram {
     @Argument(fullName=StandardArgumentDefinitions.CREATE_OUTPUT_BAM_INDEX_LONG_NAME,
             shortName=StandardArgumentDefinitions.CREATE_OUTPUT_BAM_INDEX_SHORT_NAME,
             doc = "If true, create a BAM/CRAM index when writing a coordinate-sorted BAM/CRAM file.", optional=true, common = true)
-    public boolean createOutputBamIndex = true;
+    public boolean createOutputBamIndex = getFromMainConfig("createOutputBamIndex");
 
     @Argument(fullName=StandardArgumentDefinitions.CREATE_OUTPUT_BAM_MD5_LONG_NAME,
             shortName=StandardArgumentDefinitions.CREATE_OUTPUT_BAM_MD5_SHORT_NAME,
@@ -105,10 +109,10 @@ public abstract class GATKTool extends CommandLineProgram {
 
     // default value of 40MB based on a test with CountReads (it's 5x faster than no prefetching)
     @Argument(fullName = StandardArgumentDefinitions.CLOUD_PREFETCH_BUFFER_LONG_NAME, shortName = StandardArgumentDefinitions.CLOUD_PREFETCH_BUFFER_SHORT_NAME, doc = "Size of the cloud-only prefetch buffer (in MB; 0 to disable).", optional=true)
-    public int cloudPrefetchBuffer = getDefaultCloudPrefetchBufferSize();
+    public int cloudPrefetchBuffer = getFromMainConfig("cloudPrefetchBuffer");
 
     @Argument(fullName = StandardArgumentDefinitions.CLOUD_INDEX_PREFETCH_BUFFER_LONG_NAME, shortName = StandardArgumentDefinitions.CLOUD_INDEX_PREFETCH_BUFFER_SHORT_NAME, doc = "Size of the cloud-only prefetch buffer (in MB; 0 to disable). Defaults to cloudPrefetchBuffer if unset.", optional=true)
-    public int cloudIndexPrefetchBuffer = getDefaultCloudIndexPrefetchBufferSize();
+    public int cloudIndexPrefetchBuffer = getFromMainConfig("cloudPrefetchBuffer");
 
     @Argument(fullName = StandardArgumentDefinitions.DISABLE_BAM_INDEX_CACHING_LONG_NAME,
             shortName = StandardArgumentDefinitions.DISABLE_BAM_INDEX_CACHING_SHORT_NAME,
@@ -261,22 +265,69 @@ public abstract class GATKTool extends CommandLineProgram {
     }
 
     /**
-     * @return Default size in MB of the cloud prefetch buffer. May be overridden by individual tools.
-     *         The default implementation returns a value (40 MB) that is suitable for tools with a small
-     *         number of large cloud inputs. Tools with large numbers of cloud inputs will likely want to
-     *         override to specify a smaller size.
+     * @return The cloud prefetch buffer size as set in {@link org.broadinstitute.hellbender.utils.config.MainConfig}
      */
-    public int getDefaultCloudPrefetchBufferSize() {
-        return 40;
+    public int getCloudPrefetchBufferSize() {
+
+        // Get our configuration:
+        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+
+        return config.cloudPrefetchBuffer();
     }
 
     /**
-     * @return Default size in MB of the cloud index prefetch buffer. May be overridden by individual tools.
-     *         A return value of -1 means to use the same value as returned by {@link #getDefaultCloudPrefetchBufferSize()}.
-     *         The default implementation returns -1.
+     * @return The cloud index prefetch buffer size as set in {@link org.broadinstitute.hellbender.utils.config.MainConfig}
+     *         A return value of -1 means to use the same value as returned by {@link #getCloudPrefetchBufferSize()}.
      */
-    public int getDefaultCloudIndexPrefetchBufferSize() {
-        return -1;
+    public int getCloudIndexPrefetchBufferSize() {
+
+        // Get our configuration:
+        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+
+        return config.cloudIndexPrefetchBuffer();
+    }
+
+    /**
+     * @return The cloud index prefetch buffer size as set in {@link org.broadinstitute.hellbender.utils.config.MainConfig}
+     *         A return value of -1 means to use the same value as returned by {@link #getCloudPrefetchBufferSize()}.
+     */
+    private boolean getCreateOutputBamIndexFrom() {
+
+        // Get our configuration:
+        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+
+        return config.createOutputBamIndex();
+    }
+
+    /**
+     * Get the given key from a {@link MainConfig} class.
+     * @param key The key in the {@link MainConfig} to get.
+     * @param <T> The type of the key to obtain.
+     * @return The value for the specified {@code key}.
+     */
+    private <T> T getFromMainConfig(String key) {
+
+        // Get our configuration:
+        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+
+        try {
+            for (Method m : MainConfig.class.getDeclaredMethods()) {
+                if (m.getName().compareTo(key) == 0) {
+                    return (T) m.invoke(config);
+                }
+            }
+        }
+        catch (IllegalAccessException e) {
+            // We shouldn't need to worry about this one, but just in case:
+            logger.fatal("Could not access the given key from MainConfig class: " + key);
+        }
+        catch (InvocationTargetException e) {
+            logger.fatal("Could not resolve the given key from MainConfig class: " + key);
+        }
+
+        // This should never happen.
+        // If it does, throw an exception:
+        throw new RuntimeException("Unable to retrieve property, " + key + ",from configuration: " + MainConfig.class.toString());
     }
 
     /**

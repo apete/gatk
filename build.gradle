@@ -111,6 +111,9 @@ dependencies {
     compileOnly(javadocJDKFiles)
     testCompile(javadocJDKFiles)
 
+    // Library for configuration:
+    compile 'org.aeonbits.owner:owner:1.0.9'
+
     compile 'org.broadinstitute:barclay:1.1.0'
     compile ('com.intel:genomicsdb:' + genomicsdbVersion)  {
         exclude module: 'spark-core_2.10'

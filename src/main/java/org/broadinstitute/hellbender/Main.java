@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender;
 
 import com.google.cloud.storage.StorageException;
 import htsjdk.samtools.util.StringUtil;
+import org.aeonbits.owner.ConfigCache;
 import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.hellbender.cmdline.ClassFinder;
 import org.broadinstitute.barclay.argparser.CommandLineException;
@@ -11,6 +12,7 @@ import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.ClassUtils;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.config.MainConfig;
 
 import java.io.PrintStream;
 import java.io.Serializable;
@@ -139,6 +141,48 @@ public class Main {
     }
 
     /**
+     * Injects system properties from the configuration file.
+     */
+    private void injectSystemPropertiesFromConfig() {
+
+        // Get our configuration:
+        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+
+        // Set all system properties in our config:
+        // TODO: make a convention with either separate files or property names to access these via reflection.
+
+        System.setProperty(
+                "GATK_STACKTRACE_ON_USER_EXCEPTION",
+                Boolean.toString( config.GATK_STACKTRACE_ON_USER_EXCEPTION() )
+        );
+
+        System.setProperty(
+                "samjdk.use_async_io_read_samtools",
+                Boolean.toString(config.samjdk_use_async_io_read_samtools())
+        );
+
+        System.setProperty(
+                "samjdk.use_async_io_write_samtools",
+                Boolean.toString(config.samjdk_use_async_io_write_samtools())
+        );
+
+        System.setProperty(
+                "samjdk.use_async_io_write_tribble",
+                Boolean.toString(config.samjdk_use_async_io_write_tribble())
+        );
+
+        System.setProperty(
+                "samjdk.compression_level",
+                Integer.toString(config.samjdk_compression_level() )
+        );
+
+        System.setProperty(
+                "snappy.disable",
+                Boolean.toString(config.snappy_disable())
+        );
+    }
+
+    /**
      * The entry point to the toolkit from commandline: it uses {@link #instanceMain(String[])} to run the command line
      * program and handle the returned object with {@link #handleResult(Object)}, and exit with 0.
      * If any error occurs, it handles the exception (if non-user exception, through {@link #handleNonUserException(Exception)})
@@ -147,6 +191,10 @@ public class Main {
      * Note: this is the only method that is allowed to call System.exit (because gatk tools may be run from test harness etc)
      */
     protected final void mainEntry(final String[] args) {
+
+        // To start with we inject our system properties to ensure they are defined for downstream components:
+        injectSystemPropertiesFromConfig();
+
         final CommandLineProgram program = extractCommandLineProgram(args, getPackageList(), getClassList(), getCommandLineName());
         try {
             final Object result = runCommandLineProgram(program, args);

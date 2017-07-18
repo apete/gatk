@@ -4,6 +4,7 @@ import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.tribble.Feature;
 import htsjdk.tribble.FeatureCodec;
 import htsjdk.variant.vcf.VCFHeader;
+import org.aeonbits.owner.ConfigCache;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +15,7 @@ import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.config.MainConfig;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -70,8 +72,12 @@ public final class FeatureManager implements AutoCloseable {
      * in DISCOVERED_CODECS
      */
     static {
+
+        // Get our configuration:
+        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+
         final ClassFinder finder = new ClassFinder();
-        for ( final String codecPackage : CODEC_PACKAGES ) {
+        for ( final String codecPackage : config.codec_packages() ) {
             finder.find(codecPackage, CODEC_BASE_CLASS);
         }
         // Exclude abstract classes and interfaces from the list of discovered codec classes
