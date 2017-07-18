@@ -42,8 +42,7 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
         return Arrays.asList(GATKVCFConstants.OXOG_ALT_F1R2_KEY,
                              GATKVCFConstants.OXOG_ALT_F2R1_KEY,
                              GATKVCFConstants.OXOG_REF_F1R2_KEY,
-                             GATKVCFConstants.OXOG_REF_F2R1_KEY,
-                             GATKVCFConstants.OXOG_FRACTION_KEY);
+                             GATKVCFConstants.OXOG_REF_F2R1_KEY);
     }
 
     @Override
@@ -52,8 +51,7 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
                 GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_ALT_F1R2_KEY),
                 GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_ALT_F2R1_KEY),
                 GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_REF_F1R2_KEY),
-                GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_REF_F2R1_KEY),
-                GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_FRACTION_KEY));
+                GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_REF_F2R1_KEY));
     }
 
     @Override
@@ -110,7 +108,6 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
         gb.attribute(GATKVCFConstants.OXOG_ALT_F2R1_KEY, alt_F2R1);
         gb.attribute(GATKVCFConstants.OXOG_REF_F1R2_KEY, ref_F1R2);
         gb.attribute(GATKVCFConstants.OXOG_REF_F2R1_KEY, ref_F2R1);
-        gb.attribute(GATKVCFConstants.OXOG_FRACTION_KEY, fraction);
     }
 
     protected static boolean isUsableRead(final GATKRead read) {
