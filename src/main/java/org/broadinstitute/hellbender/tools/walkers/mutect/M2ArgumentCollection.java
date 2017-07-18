@@ -38,6 +38,13 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
     public FeatureInput<VariantContext> pon;
 
     /**
+     * Usually we exclude sites in the panel of normals from active region determination, which saves time.  Setting this to true
+     * causes Mutect to produce a variant call at these sites.  This call will still be filtered, but it shows up in the vcf.
+     */
+    @Argument(fullName="genotype_pon_sites", doc="Whether to call sites in the PoN even though they will ultimately be filtered.", optional = true)
+    public boolean genotype_pon_sites = false;
+
+    /**
      * A resource, such as gnomAD, containing population allele frequencies of common and rare variants.
      */
     @Argument(fullName="germline_resource", doc="Population vcf of germline sequencing containing allele fractions.", optional = true)

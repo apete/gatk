@@ -279,6 +279,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
     public ActivityProfileState isActive(final AlignmentContext context, final ReferenceContext ref, final FeatureContext featureContext) {
         final byte refBase = ref.getBase();
         final SimpleInterval refInterval = ref.getInterval();
+
         if( context == null || context.getBasePileup().isEmpty() ) {
             return new ActivityProfileState(refInterval, 0.0);
         }
@@ -307,6 +308,10 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
             if (!germline.isEmpty() && germline.get(0).getAttributeAsDoubleList(VCFConstants.ALLELE_FREQUENCY_KEY, 0.0).get(0) > MTAC.maxPopulationAlleleFrequency) {
                 return new ActivityProfileState(refInterval, 0.0);
             }
+        }
+
+        if (!MTAC.genotype_pon_sites && !featureContext.getValues(MTAC.pon, new SimpleInterval(context.getContig(), (int) context.getPosition(), (int) context.getPosition())).isEmpty()) {
+            return new ActivityProfileState(refInterval, 0.0);
         }
 
         return new ActivityProfileState( refInterval, 1.0, ActivityProfileState.Type.NONE, null);
