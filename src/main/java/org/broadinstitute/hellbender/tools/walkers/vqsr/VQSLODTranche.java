@@ -18,8 +18,19 @@ public class VQSLODTranche extends Tranche {
 
     static final Comparator<VQSLODTranche> TRANCHE_ORDER = (tranche1, tranche2) -> Double.compare(tranche1.minVQSLod, tranche2.minVQSLod);
 
-    //TODO: update these
-    public static List<Double> VQSLODoutputs = new ArrayList<Double>(Arrays.asList(10.0,9.0,8.0,7.0,6.0));
+    //TODO: refine these
+    public static List<Double> VQSLODoutputs = new ArrayList<>(1000);
+    {
+        for (double i=10.0; i>5; i-=0.1) {
+            VQSLODoutputs.add(i);
+        }
+        for (double i=5.0; i>-5; i-=0.01) {
+            VQSLODoutputs.add(i);
+        }
+        for (double i=-5.0; i>-10; i-=0.1) {
+            VQSLODoutputs.add(i);
+        }
+    };
 
     public String getTrancheIndex() {
         return Double.toString(minVQSLod);
