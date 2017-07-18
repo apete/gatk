@@ -1,13 +1,17 @@
 package org.broadinstitute.hellbender.tools.walkers.vqsr;
 
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.text.XReadLines;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.*;
 
 import static java.lang.Math.abs;
+import static java.util.Collections.sort;
 
 /*
  * Represents a VQSLOD tranche in VQSR for use in scattered VariantRecalibrator runs.
@@ -16,10 +20,8 @@ import static java.lang.Math.abs;
 public class VQSLODTranche extends Tranche {
     private static final int CURRENT_VERSION = 6;
 
-    static final Comparator<VQSLODTranche> TRANCHE_ORDER = (tranche1, tranche2) -> Double.compare(tranche1.minVQSLod, tranche2.minVQSLod);
-
     //TODO: refine these
-    public static List<Double> VQSLODoutputs = new ArrayList<>(1000);
+    /*public static List<Double> VQSLODoutputs = new ArrayList<>(1000);
     {
         for (double i=10.0; i>5; i-=0.1) {
             VQSLODoutputs.add(i);
@@ -30,10 +32,11 @@ public class VQSLODTranche extends Tranche {
         for (double i=-5.0; i>-10; i-=0.1) {
             VQSLODoutputs.add(i);
         }
-    };
+    };*/
+    public static List<Double> VQSLODoutputs = new ArrayList<>(Arrays.asList(10.0, 8.0, 6.0, 4.0, 2.0, 0.0, -2.0, -4.0, -6.0, -8.0, -10.0, -12.0));
 
-    public String getTrancheIndex() {
-        return Double.toString(minVQSLod);
+    public Double getTrancheIndex() {
+        return minVQSLod;
     }
 
     public VQSLODTranche(
@@ -49,13 +52,32 @@ public class VQSLODTranche extends Tranche {
         super(name, knownTiTv, numNovel, minVQSLod, model, novelTiTv, accessibleTruthSites, numKnown, callsAtTruthSites);
     }
 
+    public int compareTo(VQSLODTranche t) {
+        return (int)Math.round(t.minVQSLod - this.minVQSLod);
+    }
+
     @Override
     public String toString() {
         return String.format("Tranche minVQSLod=%.4f known=(%d @ %.4f) novel=(%d @ %.4f) truthSites(%d accessible, %d called), name=%s]",
                 minVQSLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, callsAtTruthSites, name);
     }
 
-    protected static VQSLODTranche trancheOfVariants(final List<VariantDatum> data, final int minI, final VariantRecalibratorArgumentCollection.Mode model ) {
+    public static String printHeader() {
+        try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+             final PrintStream stream = new PrintStream(bytes)) {
+
+            stream.println("# Variant quality score tranches file");
+            stream.println("# Version number " + CURRENT_VERSION);
+            stream.println("requestedVQSLOD,numKnown,numNovel,knownTiTv,novelTiTv,minVQSLod,filterName,model,accessibleTruthSites,callsAtTruthSites,truthSensitivity");
+
+            return bytes.toString();
+        }
+        catch (IOException e) {
+            throw new GATKException("IOException while converting tranche to a string");
+        }
+    }
+
+    protected static VQSLODTranche trancheOfVariants(final List<VariantDatum> data, final int minI, final double trancheThreshold, final VariantRecalibratorArgumentCollection.Mode model ) {
         int numKnown = 0, numNovel = 0, knownTi = 0, knownTv = 0, novelTi = 0, novelTv = 0;
 
         final double minLod = data.get(minI).lod;
@@ -81,7 +103,8 @@ public class VQSLODTranche extends Tranche {
         final int accessibleTruthSites = VariantDatum.countCallsAtTruth(data, Double.NEGATIVE_INFINITY);
         final int nCallsAtTruth = VariantDatum.countCallsAtTruth(data, minLod);
 
-        return new VQSLODTranche(minLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, nCallsAtTruth, model, DEFAULT_TRANCHE_NAME);
+        //First column should be the requested threshold, not the value in the data closest to the threshold
+        return new VQSLODTranche(trancheThreshold, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, nCallsAtTruth, model, DEFAULT_TRANCHE_NAME);
     }
 
     /**
@@ -100,7 +123,7 @@ public class VQSLODTranche extends Tranche {
                     else {
                         String[] words = line.split("\\s+"); //split on whitespace
                         if (Integer.parseInt(words[3]) != CURRENT_VERSION)
-                            throw new UserException.BadInput("The file " + " contains version " + words[3] + "tranches, but VQSLOD tranche parsing requires version " + CURRENT_VERSION);
+                            throw new UserException.BadInput("The file " + " contains version " + words[3] + " tranches, but VQSLOD tranche parsing requires version " + CURRENT_VERSION);
                         continue;
                     }
                 }
@@ -134,24 +157,27 @@ public class VQSLODTranche extends Tranche {
             }
         }
 
-        tranches.sort(TRANCHE_ORDER);
+        tranches.sort(new TrancheComparator<>());
         return tranches;
     }
 
-    public static List<VQSLODTranche> mergeTranches(final Map<Double, List<VQSLODTranche>> scatteredTranches, final List<Double> tsLevels, final VariantRecalibratorArgumentCollection.Mode mode) {
+    public static List<TruthSensitivityTranche> mergeAndConvertTranches(final Map<Double, List<VQSLODTranche>> scatteredTranches, final List<Double> tsLevels, final VariantRecalibratorArgumentCollection.Mode mode) {
         List<VQSLODTranche> mergedTranches = new ArrayList<>();
-        List<VQSLODTranche> gatheredTranches = new ArrayList<>();
+        List<TruthSensitivityTranche> gatheredTranches = new ArrayList<>();
 
         //make a list of merged tranches of the same length
         for (final Double VQSLODlevel : VQSLODoutputs) {
-            mergedTranches.add(mergeTranches(scatteredTranches.get(VQSLODlevel),mode));
+            mergedTranches.add(mergeAndConvertTranches(scatteredTranches.get(VQSLODlevel),mode));
         }
 
         //go through the list of merged tranches to select those that match most closely the tsLevels
-        //assume tsLevels are sorted and tranches are sorted
+        //don't assume tsLevels are sorted
+        sort(tsLevels);
+        //tranches should be sorted based on the file format and the fact that we read them into a list
+
         ListIterator<Double> tsIter= tsLevels.listIterator();
         double targetTS = tsIter.next();
-        double sensitivityDelta = 1.0; //initialize to 100%
+        double sensitivityDelta = 100.0; //initialize to 100%
         double prevDelta;
         ListIterator<VQSLODTranche> trancheIter = mergedTranches.listIterator();
         VQSLODTranche currentTranche = trancheIter.next();
@@ -162,25 +188,26 @@ public class VQSLODTranche extends Tranche {
             prevDelta = sensitivityDelta;
             prevTranche = currentTranche;
             currentTranche = trancheIter.next();
-            sensitivityDelta = abs(targetTS - currentTranche.getTruthSensitivity());
+            sensitivityDelta = abs(targetTS - currentTranche.getTruthSensitivity()*100);
             if (sensitivityDelta > prevDelta) {
-                gatheredTranches.add(prevTranche);
+                gatheredTranches.add(new TruthSensitivityTranche(targetTS, prevTranche.minVQSLod, prevTranche.numKnown, prevTranche.knownTiTv, prevTranche.numNovel, prevTranche.novelTiTv, prevTranche.accessibleTruthSites, prevTranche.callsAtTruthSites, mode));
                 if (tsIter.hasNext()) {
                     targetTS = tsIter.next();
+                    sensitivityDelta = abs(targetTS - currentTranche.getTruthSensitivity()*100);
                 }
                 else {
                     break;
                 }
             }
-            else if ( !trancheIter.hasNext()) { //if we haven't seen the best match, but we ran out of tranches
-                gatheredTranches.add(currentTranche);
+            if ( !trancheIter.hasNext()) { //if we haven't seen the best match, but we ran out of tranches
+                gatheredTranches.add(new TruthSensitivityTranche(targetTS, currentTranche.minVQSLod, currentTranche.numKnown, currentTranche.knownTiTv, currentTranche.numNovel, currentTranche.novelTiTv, currentTranche.accessibleTruthSites, currentTranche.callsAtTruthSites, mode));
             }
         }
 
         return gatheredTranches;
     }
 
-    public static VQSLODTranche mergeTranches(final List<VQSLODTranche> scatteredTranches, VariantRecalibratorArgumentCollection.Mode mode) {
+    public static VQSLODTranche mergeAndConvertTranches(final List<VQSLODTranche> scatteredTranches, VariantRecalibratorArgumentCollection.Mode mode) {
         double indexVQSLOD = scatteredTranches.get(0).minVQSLod;
         int sumNumKnown = 0;
         double sumKnownTransitions = 0;

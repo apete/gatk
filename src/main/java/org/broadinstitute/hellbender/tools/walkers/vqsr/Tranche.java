@@ -16,9 +16,6 @@ import java.util.Map;
  * Created by gauthier on 7/13/17.
  */
 public abstract class Tranche {
-    protected static int CURRENT_VERSION;
-
-    static Comparator<Tranche> TRANCHE_ORDER;
 
     protected static final String DEFAULT_TRANCHE_NAME = "anonymous";
     protected static final String COMMENT_STRING = "#";
@@ -55,6 +52,20 @@ public abstract class Tranche {
         this.callsAtTruthSites = callsAtTruthSites;
     }
 
+    public static class TrancheTruthSensitivityComparator implements Comparator<TruthSensitivityTranche> {
+        @Override
+        public int compare(final TruthSensitivityTranche tranche1, final TruthSensitivityTranche tranche2) {
+            return Double.compare(tranche1.targetTruthSensitivity, tranche2.targetTruthSensitivity);
+        }
+    }
+
+    public static class TrancheComparator<T extends Tranche> implements Comparator<T> {
+        @Override
+        public int compare(final T tranche1, final T tranche2) {
+            return Double.compare(tranche1.minVQSLod, tranche2.minVQSLod);
+        }
+    }
+
     /**
      * Returns an appropriately formatted string representing the raw tranches file on disk.
      *
@@ -65,11 +76,7 @@ public abstract class Tranche {
         try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
              final PrintStream stream = new PrintStream(bytes)) {
             if( tranches.size() > 1 )
-                Collections.sort( tranches, TRANCHE_ORDER);
-
-            stream.println("# Variant quality score tranches file");
-            stream.println("# Version number " + CURRENT_VERSION);
-            stream.println("targetTruthSensitivity,numKnown,numNovel,knownTiTv,novelTiTv,minVQSLod,filterName,model,accessibleTruthSites,callsAtTruthSites,truthSensitivity");
+                Collections.sort( tranches, new TrancheComparator<>());
 
             Tranche prev = null;
             for ( Tranche t : tranches ) {
@@ -84,8 +91,9 @@ public abstract class Tranche {
         }
     }
 
-    public abstract String getTrancheIndex();
+    public abstract Double getTrancheIndex();
 
+    //TODO: naming is wrong from VQSLODTranche
     public <T extends Tranche> String getTrancheString(T prev) {
             return String.format("%.2f,%d,%d,%.4f,%.4f,%.4f,VQSRTranche%s%.2fto%.2f,%s,%d,%d,%.4f%n",
                     getTrancheIndex(), numKnown, numNovel, knownTiTv, novelTiTv, minVQSLod, model.toString(),

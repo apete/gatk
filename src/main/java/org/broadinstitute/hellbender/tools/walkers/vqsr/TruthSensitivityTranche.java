@@ -70,21 +70,29 @@ final class TruthSensitivityTranche extends Tranche {
 
     }
 
-    public String getTrancheIndex() {
-        return Double.toString(targetTruthSensitivity);
+    public Double getTrancheIndex() {
+        return targetTruthSensitivity;
+    }
+
+    public static String printHeader() {
+        try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+             final PrintStream stream = new PrintStream(bytes)) {
+
+            stream.println("# Variant quality score tranches file");
+            stream.println("# Version number " + CURRENT_VERSION);
+            stream.println("targetTruthSensitivity,numKnown,numNovel,knownTiTv,novelTiTv,minVQSLod,filterName,model,accessibleTruthSites,callsAtTruthSites,truthSensitivity");
+
+            return bytes.toString();
+        }
+        catch (IOException e) {
+            throw new GATKException("IOException while converting tranche to a string");
+        }
     }
 
     @Override
     public String toString() {
         return String.format("TruthSensitivityTranche targetTruthSensitivity=%.2f minVQSLod=%.4f known=(%d @ %.4f) novel=(%d @ %.4f) truthSites(%d accessible, %d called), name=%s]",
                 targetTruthSensitivity, minVQSLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, callsAtTruthSites, name);
-    }
-
-    public static class TrancheTruthSensitivityComparator implements Comparator<TruthSensitivityTranche> {
-        @Override
-        public int compare(final TruthSensitivityTranche tranche1, final TruthSensitivityTranche tranche2) {
-            return Double.compare(tranche1.targetTruthSensitivity, tranche2.targetTruthSensitivity);
-        }
     }
 
     /**

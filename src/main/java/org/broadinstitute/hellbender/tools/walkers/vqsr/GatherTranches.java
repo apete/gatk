@@ -8,10 +8,11 @@ import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.ReadProgramGroup;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.utils.recalibration.RecalibrationReport;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.*;
 
 @CommandLineProgramProperties(
@@ -46,10 +47,18 @@ public class GatherTranches extends CommandLineProgram {
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME, doc="File to output the gathered tranches file to")
     public File outputReport;
 
+    private PrintStream tranchesStream;
+
     @Override
     protected Object doWork() {
         inputReports.forEach(IOUtil::assertFileIsReadable);
-        IOUtil.assertFileIsWritable(outputReport);
+
+        try {
+            tranchesStream = new PrintStream(outputReport);
+        } catch (FileNotFoundException e) {
+            throw new UserException.CouldNotCreateOutputFile(outputReport, e);
+        }
+
 
         //use a data structure to hold the tranches from each scatter shard in a format that's easy to merge
         final Map<Double, List<VQSLODTranche>> scatteredTranches = new HashMap<>();
@@ -58,7 +67,8 @@ public class GatherTranches extends CommandLineProgram {
                 List<VQSLODTranche> shardTranches = VQSLODTranche.readTranches(trancheFile);
                 for (final VQSLODTranche currentTranche : shardTranches) {
                     if (scatteredTranches.containsKey(currentTranche.minVQSLod)) {
-
+                        final List<VQSLODTranche> toAdd = scatteredTranches.get(currentTranche.minVQSLod);
+                        toAdd.add(currentTranche);
                     }
                     else {
                         scatteredTranches.put(currentTranche.minVQSLod, new ArrayList<>(Arrays.asList(currentTranche)));
@@ -69,7 +79,8 @@ public class GatherTranches extends CommandLineProgram {
             }
         }
 
-        VQSLODTranche.mergeTranches(scatteredTranches, TS_TRANCHES, MODE);
+        tranchesStream.print(TruthSensitivityTranche.printHeader());
+        tranchesStream.print(Tranche.tranchesString(VQSLODTranche.mergeAndConvertTranches(scatteredTranches, TS_TRANCHES, MODE)));
 
         return 0;
     }

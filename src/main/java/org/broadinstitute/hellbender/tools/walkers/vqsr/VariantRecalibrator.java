@@ -615,17 +615,18 @@ public class VariantRecalibrator extends MultiVariantWalker {
 
                 engine.calculateWorstPerformingAnnotation(dataManager.getData(), goodModel, badModel);
 
+
+                // Find the VQSLOD cutoff values which correspond to the various tranches of calls requested by the user
+                final int nCallsAtTruth = TrancheManager.countCallsAtTruth(dataManager.getData(), Double.NEGATIVE_INFINITY);
+                final TrancheManager.SelectionMetric metric = new TrancheManager.TruthSensitivityMetric(nCallsAtTruth);
                 if ( !scatterTranches ) {
-                    // Find the VQSLOD cutoff values which correspond to the various tranches of calls requested by the user
-                    final int nCallsAtTruth = TrancheManager.countCallsAtTruth(dataManager.getData(), Double.NEGATIVE_INFINITY);
-                    final TrancheManager.SelectionMetric metric = new TrancheManager.TruthSensitivityMetric(nCallsAtTruth);
                     final List<? extends Tranche> tranches = TrancheManager.findTranches(dataManager.getData(), TS_TRANCHES, metric, VRAC.MODE);
+                    tranchesStream.print(TruthSensitivityTranche.printHeader());
                     tranchesStream.print(Tranche.tranchesString(tranches));
                 }
                 else {
-                    final int nCallsAtTruth = TrancheManager.countCallsAtTruth(dataManager.getData(), Double.NEGATIVE_INFINITY);
-                    final TrancheManager.SelectionMetric metric = new TrancheManager.TruthSensitivityMetric(nCallsAtTruth);
                     final List<? extends Tranche> tranches = TrancheManager.findVQSLODTranches(dataManager.getData(), VQSLODTranche.VQSLODoutputs, metric, VRAC.MODE);
+                    tranchesStream.print(VQSLODTranche.printHeader());
                     tranchesStream.print(Tranche.tranchesString(tranches));
                 }
 
@@ -647,6 +648,9 @@ public class VariantRecalibrator extends MultiVariantWalker {
                 if (VRAC.MODE == VariantRecalibratorArgumentCollection.Mode.INDEL) {
                     // Print out an info message to make it clear why the tranches plot is not generated
                     logger.info("Tranches plot will not be generated since we are running in INDEL mode");
+                } else if (scatterTranches) {
+                    //skip R plots for scattered tranches because the format is different and the R code parses them
+                    logger.info("Tranches plot will not be generated since we are running in scattered mode");
                 } else {
                     // Execute the RScript command to plot the table of truth values
                     final RScriptExecutor executor = new RScriptExecutor();

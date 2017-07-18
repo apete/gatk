@@ -202,7 +202,7 @@ public class TrancheManager {
         for ( int i = 0; i < n; i++ ) {
             if ( data.get(i).lod >= trancheThreshold ) {
                 // we've found the largest group of variants with LOD >= our target LOD
-                VQSLODTranche t = VQSLODTranche.trancheOfVariants(data, i, model);
+                VQSLODTranche t = VQSLODTranche.trancheOfVariants(data, i, trancheThreshold, model);
                 logger.info(String.format("  Found tranche for %.3f: %.3f threshold starting with variant %d; running score is %.3f ",
                         trancheThreshold, metricThreshold, i, metric.getRunningMetric(i)));
                 logger.info(String.format("  VQSLODTranche is %s", t));
