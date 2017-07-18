@@ -39,9 +39,6 @@ public class M2FiltersArgumentCollection extends AssemblyBasedCallerArgumentColl
     @Argument(fullName = "maxMedianBaseQualityDifference", optional = true, doc="filter variants for which alt reads' median base quality is much lower than ref reads' median base quality.")
     public int maxMedianBaseQualityDifference = 10;
 
-    @Argument(fullName = "maxMedianClippingDifference", optional = true, doc="filter variants for which alt reads' median number of clipped bases is too high compared to the median for ref reads.")
-    public int maxMedianClippingDifference = 1;
-
     @Argument(fullName = "maxMedianFragmentLengthDifference", optional = true, doc="filter variants for which alt reads' median fragment length is very different from the median for ref reads.")
     public int maxMedianFragmentLengthDifference = 10000;
 
