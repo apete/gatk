@@ -2,9 +2,7 @@ package org.broadinstitute.hellbender.utils.config;
 
 import org.aeonbits.owner.Config;
 import org.aeonbits.owner.Config.*;
-import org.broadinstitute.hellbender.engine.FeatureManager;
 
-import javax.enterprise.inject.Default;
 import java.util.List;
 
 /**
@@ -17,16 +15,18 @@ public interface MainConfig extends Config {
 
     // =================================================================================
     // General Options:
+    // =================================================================================
 
     @DefaultValue("true")
     boolean GATK_STACKTRACE_ON_USER_EXCEPTION();
 
     @DefaultValue(
-            "htsjdk.variant, htsjdk.tribble, org.broadinstitute.hellbender.utils.codecs")
+            "htsjdk.variant,htsjdk.tribble,org.broadinstitute.hellbender.utils.codecs")
     List<String> codec_packages();
 
     // =================================================================================
     // GATKTool Options:
+    // =================================================================================
 
     @DefaultValue("40")
     int cloudPrefetchBuffer();
@@ -39,6 +39,7 @@ public interface MainConfig extends Config {
 
     // =================================================================================
     // SAMJDK Options:
+    // =================================================================================
 
     @Key("samjdk.use_async_io_read_samtools")
     @DefaultValue("false")
@@ -55,6 +56,10 @@ public interface MainConfig extends Config {
     @Key("samjdk.compression_level")
     @DefaultValue("1")
     int samjdk_compression_level();
+
+    // =================================================================================
+    // Other Options:
+    // =================================================================================
 
     @Key("snappy.disable")
     @DefaultValue("true")

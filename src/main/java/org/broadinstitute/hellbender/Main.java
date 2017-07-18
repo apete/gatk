@@ -14,8 +14,7 @@ import org.broadinstitute.hellbender.utils.ClassUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.config.MainConfig;
 
-import java.io.PrintStream;
-import java.io.Serializable;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -70,6 +69,11 @@ public class Main {
      */
     private static final int ANY_OTHER_EXCEPTION_EXIT_VALUE = 3;
     private static final String STACK_TRACE_ON_USER_EXCEPTION_PROPERTY = "GATK_STACKTRACE_ON_USER_EXCEPTION";
+
+    /**
+     * The option specifying a configuration file.
+     */
+    private static final String configFileOption = "--gatkConfigFile";
 
     /**
      * Prints the given message (may be null) to the provided stream, adding adornments and formatting.
@@ -143,10 +147,7 @@ public class Main {
     /**
      * Injects system properties from the configuration file.
      */
-    private void injectSystemPropertiesFromConfig() {
-
-        // Get our configuration:
-        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+    private void injectSystemPropertiesFromConfig(MainConfig config) {
 
         // Set all system properties in our config:
         // TODO: make a convention with either separate files or property names to access these via reflection.
@@ -183,6 +184,73 @@ public class Main {
     }
 
     /**
+     * Get the configuration file name from the given arguments.
+     * Modifies the given arguments to remove both the configuration file specification string
+     * and the configuration file name from the args.
+     *
+     * NOTE: Does NOT validate that the resulting string is a configuration file.
+     *
+     * @param args Command-line arguments passed to this program.
+     * @return The name of the configuration file for this program or {@code null}.
+     */
+    private String getConfigFilenameFromArgs( ArrayList<String> args ) {
+
+        String configFileName = null;
+
+        for ( int i = 0 ; i < args.size() ; ++i ) {
+            if (args.get(i).compareTo(configFileOption) == 0) {
+
+                // Get rid of the command-line argument name:
+                args.remove(i);
+
+                if ( i < args.size() ) {
+
+                    // Get and remove the specified config file:
+                    configFileName = args.remove(i);
+                    break;
+                }
+                else {
+                    // No file was specified.
+                    // We cannot work under these conditions:
+
+                    String message = "ERROR: Configuration file not given after config file option specified: " + configFileOption;
+                    System.err.println(message);
+                    throw new RuntimeException(message);
+                }
+            }
+        }
+
+        return configFileName;
+    }
+
+    private MainConfig getConfiguration(final String configFileName) {
+
+        final MainConfig mainConfig;
+
+        // Get a place to store our properties:
+        final Properties userConfigFileProperties = new Properties();
+
+        // Try to get the config from the specified file:
+        if ( configFileName != null ) {
+
+            try {
+                final FileInputStream userConfigFileInputStream = new FileInputStream(configFileName);
+                userConfigFileProperties.load(userConfigFileInputStream);
+            } catch (final FileNotFoundException e) {
+                System.err.println("WARNING: unable to find specified config file: "
+                        + configFileName + " - defaulting to built-in configuration settings.");
+            }
+            catch (final IOException e) {
+                System.err.println("WARNING: unable to load specified config file: "
+                        + configFileName + " - defaulting to built-in configuration settings.");
+            }
+        }
+
+        // Return our configuration:
+        return ConfigCache.getOrCreate(MainConfig.class, userConfigFileProperties);
+    }
+
+    /**
      * The entry point to the toolkit from commandline: it uses {@link #instanceMain(String[])} to run the command line
      * program and handle the returned object with {@link #handleResult(Object)}, and exit with 0.
      * If any error occurs, it handles the exception (if non-user exception, through {@link #handleNonUserException(Exception)})
@@ -192,12 +260,21 @@ public class Main {
      */
     protected final void mainEntry(final String[] args) {
 
-        // To start with we inject our system properties to ensure they are defined for downstream components:
-        injectSystemPropertiesFromConfig();
+        // First we package our args together a little better:
+        ArrayList<String> argArrayList = new ArrayList<>( Arrays.asList(args) );
 
-        final CommandLineProgram program = extractCommandLineProgram(args, getPackageList(), getClassList(), getCommandLineName());
+        // Get config from args:
+        final String configFileName = getConfigFilenameFromArgs( argArrayList );
+
+        // Get our config file:
+        MainConfig mainConfig = getConfiguration(configFileName);
+
+        // To start with we inject our system properties to ensure they are defined for downstream components:
+        injectSystemPropertiesFromConfig(mainConfig);
+
+        final CommandLineProgram program = extractCommandLineProgram(argArrayList.toArray(new String[] {}), getPackageList(), getClassList(), getCommandLineName());
         try {
-            final Object result = runCommandLineProgram(program, args);
+            final Object result = runCommandLineProgram(program, argArrayList.toArray(new String[] {}));
             handleResult(result);
             System.exit(0);
         } catch (final CommandLineException e){
@@ -215,7 +292,6 @@ public class Main {
             System.exit(ANY_OTHER_EXCEPTION_EXIT_VALUE);
         }
     }
-
 
 
     /**
