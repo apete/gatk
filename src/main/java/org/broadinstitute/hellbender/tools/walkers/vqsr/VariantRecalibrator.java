@@ -297,6 +297,12 @@ public class VariantRecalibrator extends MultiVariantWalker {
             optional=true)
     private int sampleMod = 1;
 
+    @Argument(fullName="output_tranches_for_scatter",
+            shortName = "scatterTranches",
+            doc="Output tranches in a format appropriate to running VariantRecalibrator in scatter-gather",
+            optional = true)
+    private boolean scatterTranches = false;
+
     @Hidden
     @Argument(fullName="replicate",
             shortName="replicate",
@@ -609,11 +615,19 @@ public class VariantRecalibrator extends MultiVariantWalker {
 
                 engine.calculateWorstPerformingAnnotation(dataManager.getData(), goodModel, badModel);
 
-                // Find the VQSLOD cutoff values which correspond to the various tranches of calls requested by the user
-                final int nCallsAtTruth = TrancheManager.countCallsAtTruth(dataManager.getData(), Double.NEGATIVE_INFINITY);
-                final TrancheManager.SelectionMetric metric = new TrancheManager.TruthSensitivityMetric(nCallsAtTruth);
-                final List<Tranche> tranches = TrancheManager.findTranches(dataManager.getData(), TS_TRANCHES, metric, VRAC.MODE);
-                tranchesStream.print(Tranche.tranchesString(tranches));
+                if ( !scatterTranches ) {
+                    // Find the VQSLOD cutoff values which correspond to the various tranches of calls requested by the user
+                    final int nCallsAtTruth = TrancheManager.countCallsAtTruth(dataManager.getData(), Double.NEGATIVE_INFINITY);
+                    final TrancheManager.SelectionMetric metric = new TrancheManager.TruthSensitivityMetric(nCallsAtTruth);
+                    final List<? extends Tranche> tranches = TrancheManager.findTranches(dataManager.getData(), TS_TRANCHES, metric, VRAC.MODE);
+                    tranchesStream.print(Tranche.tranchesString(tranches));
+                }
+                else {
+                    final int nCallsAtTruth = TrancheManager.countCallsAtTruth(dataManager.getData(), Double.NEGATIVE_INFINITY);
+                    final TrancheManager.SelectionMetric metric = new TrancheManager.TruthSensitivityMetric(nCallsAtTruth);
+                    final List<? extends Tranche> tranches = TrancheManager.findVQSLODTranches(dataManager.getData(), VQSLODTranche.VQSLODoutputs, metric, VRAC.MODE);
+                    tranchesStream.print(Tranche.tranchesString(tranches));
+                }
 
                 logger.info("Writing out recalibration table...");
                 dataManager.writeOutRecalibrationTable(recalWriter, getBestAvailableSequenceDictionary());

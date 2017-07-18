@@ -14,7 +14,7 @@ import java.util.*;
  * Represents a truth sensitivity tranche in VQSR.
  * (Package-private because it's not usable outside.)
  */
-final class TruthSensitivityTranche {
+final class TruthSensitivityTranche extends Tranche {
     private static final int CURRENT_VERSION = 5;
 
     private static final String DEFAULT_TRANCHE_NAME = "anonymous";
@@ -28,16 +28,6 @@ final class TruthSensitivityTranche {
 
     //Note: visibility is set to package-local for testing
     final double targetTruthSensitivity;
-    final double minVQSLod;  //minimum value of VQSLOD in this tranche
-    final double knownTiTv;  //titv value of known sites in this tranche
-    final double novelTiTv;  //titv value of novel sites in this tranche
-    final int numKnown;      //number of known sites in this tranche
-    final int numNovel;      //number of novel sites in this tranche
-    final VariantRecalibratorArgumentCollection.Mode model;
-    final String name;       //Name of the tranche
-
-    private final int accessibleTruthSites;
-    private final int callsAtTruthSites;
 
     public TruthSensitivityTranche(
             final double targetTruthSensitivity,
@@ -63,6 +53,7 @@ final class TruthSensitivityTranche {
             final int callsAtTruthSites,
             final VariantRecalibratorArgumentCollection.Mode model,
             final String name) {
+        super(name, knownTiTv, numNovel, minVQSLod, model, novelTiTv, accessibleTruthSites, numKnown, callsAtTruthSites);
         if ( targetTruthSensitivity < 0.0 || targetTruthSensitivity > 100.0) {
             throw new GATKException("Target FDR is unreasonable " + targetTruthSensitivity);
         }
@@ -76,16 +67,11 @@ final class TruthSensitivityTranche {
         }
 
         this.targetTruthSensitivity = targetTruthSensitivity;
-        this.minVQSLod = minVQSLod;
-        this.novelTiTv = novelTiTv;
-        this.numNovel = numNovel;
-        this.knownTiTv = knownTiTv;
-        this.numKnown = numKnown;
-        this.model = model;
-        this.name = name;
 
-        this.accessibleTruthSites = accessibleTruthSites;
-        this.callsAtTruthSites = callsAtTruthSites;
+    }
+
+    public String getTrancheIndex() {
+        return Double.toString(targetTruthSensitivity);
     }
 
     @Override
@@ -94,85 +80,10 @@ final class TruthSensitivityTranche {
                 targetTruthSensitivity, minVQSLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, callsAtTruthSites, name);
     }
 
-    /**
-     * Returns an appropriately formatted string representing the raw tranches file on disk.
-     *
-     * @param tranches
-     * @return
-     */
-    public static String tranchesString( final List<TruthSensitivityTranche> tranches ) {
-        try (final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-             final PrintStream stream = new PrintStream(bytes)) {
-            if( tranches.size() > 1 )
-                Collections.sort( tranches, new TrancheTruthSensitivityComparator() );
-
-            stream.println("# Variant quality score tranches file");
-            stream.println("# Version number " + CURRENT_VERSION);
-            stream.println("targetTruthSensitivity,numKnown,numNovel,knownTiTv,novelTiTv,minVQSLod,filterName,model,accessibleTruthSites,callsAtTruthSites,truthSensitivity");
-
-            TruthSensitivityTranche prev = null;
-            for ( TruthSensitivityTranche t : tranches ) {
-                stream.printf("%.2f,%d,%d,%.4f,%.4f,%.4f,VQSRTranche%s%.2fto%.2f,%s,%d,%d,%.4f%n",
-                        t.targetTruthSensitivity, t.numKnown, t.numNovel, t.knownTiTv, t.novelTiTv, t.minVQSLod, t.model.toString(),
-                        (prev == null ? 0.0 : prev.targetTruthSensitivity), t.targetTruthSensitivity, t.model.toString(), t.accessibleTruthSites, t.callsAtTruthSites, t.getTruthSensitivity());
-                prev = t;
-            }
-
-            return bytes.toString();
-        }
-        catch (IOException e) {
-            throw new GATKException("IOException while converting tranche to a string");
-        }
-    }
-
     public static class TrancheTruthSensitivityComparator implements Comparator<TruthSensitivityTranche> {
         @Override
         public int compare(final TruthSensitivityTranche tranche1, final TruthSensitivityTranche tranche2) {
             return Double.compare(tranche1.targetTruthSensitivity, tranche2.targetTruthSensitivity);
-        }
-    }
-
-    private double getTruthSensitivity() {
-        return accessibleTruthSites > 0 ? callsAtTruthSites / (1.0*accessibleTruthSites) : 0.0;
-    }
-
-    private static double getRequiredDouble(final Map<String,String> bindings, final String key ) {
-        if ( bindings.containsKey(key) ) {
-            try {
-                return Double.valueOf(bindings.get(key));
-            } catch (NumberFormatException e){
-                throw new UserException.MalformedFile("Malformed tranches file. Invalid value for key " + key);
-            }
-        } else  {
-            throw new UserException.MalformedFile("Malformed tranches file.  Missing required key " + key);
-        }
-    }
-
-    private static double getOptionalDouble(final Map<String,String> bindings, String key, final double defaultValue ) {
-        try{
-            return Double.valueOf(bindings.getOrDefault(key, String.valueOf(defaultValue)));
-        } catch (NumberFormatException e){
-            throw new UserException.MalformedFile("Malformed tranches file. Invalid value for key " + key);
-        }
-    }
-
-    private static int getRequiredInteger(final Map<String,String> bindings, final String key) {
-        if ( bindings.containsKey(key) ) {
-            try{
-                return Integer.valueOf(bindings.get(key));
-            } catch (NumberFormatException e){
-                throw new UserException.MalformedFile("Malformed tranches file. Invalid value for key " + key);
-            }
-        } else {
-            throw new UserException.MalformedFile("Malformed tranches file.  Missing required key " + key);
-        }
-    }
-
-    private static int getOptionalInteger(final Map<String,String> bindings, final String key, final int defaultValue) {
-        try{
-            return Integer.valueOf(bindings.getOrDefault(key, String.valueOf(defaultValue)));
-        } catch (NumberFormatException e){
-            throw new UserException.MalformedFile("Malformed tranches file. Invalid value for key " + key);
         }
     }
 
@@ -302,10 +213,10 @@ final class TruthSensitivityTranche {
         return null;
     }
 
-    private static TruthSensitivityTranche trancheOfVariants(final List<VariantDatum> data, int minI, double ts, final VariantRecalibratorArgumentCollection.Mode model ) {
+    protected static TruthSensitivityTranche trancheOfVariants(final List<VariantDatum> data, final int minI, final double ts, final VariantRecalibratorArgumentCollection.Mode model ) {
         int numKnown = 0, numNovel = 0, knownTi = 0, knownTv = 0, novelTi = 0, novelTv = 0;
 
-        double minLod = data.get(minI).lod;
+        final double minLod = data.get(minI).lod;
         for ( final VariantDatum datum : data ) {
             if ( datum.lod >= minLod ) {
                 if ( datum.isKnown ) {
@@ -322,11 +233,11 @@ final class TruthSensitivityTranche {
             }
         }
 
-        double knownTiTv = knownTi / Math.max(1.0 * knownTv, 1.0);
-        double novelTiTv = novelTi / Math.max(1.0 * novelTv, 1.0);
+        final double knownTiTv = knownTi / Math.max(1.0 * knownTv, 1.0);
+        final double novelTiTv = novelTi / Math.max(1.0 * novelTv, 1.0);
 
-        int accessibleTruthSites = VariantDatum.countCallsAtTruth(data, Double.NEGATIVE_INFINITY);
-        int nCallsAtTruth = VariantDatum.countCallsAtTruth(data, minLod);
+        final int accessibleTruthSites = VariantDatum.countCallsAtTruth(data, Double.NEGATIVE_INFINITY);
+        final int nCallsAtTruth = VariantDatum.countCallsAtTruth(data, minLod);
 
         return new TruthSensitivityTranche(ts, minLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, nCallsAtTruth, model, DEFAULT_TRANCHE_NAME);
     }

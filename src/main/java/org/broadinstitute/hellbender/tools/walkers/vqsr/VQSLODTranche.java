@@ -44,6 +44,35 @@ public class VQSLODTranche extends Tranche {
                 minVQSLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, callsAtTruthSites, name);
     }
 
+    protected static VQSLODTranche trancheOfVariants(final List<VariantDatum> data, final int minI, final VariantRecalibratorArgumentCollection.Mode model ) {
+        int numKnown = 0, numNovel = 0, knownTi = 0, knownTv = 0, novelTi = 0, novelTv = 0;
+
+        final double minLod = data.get(minI).lod;
+        for ( final VariantDatum datum : data ) {
+            if ( datum.lod >= minLod ) {
+                if ( datum.isKnown ) {
+                    numKnown++;
+                    if( datum.isSNP ) {
+                        if ( datum.isTransition ) { knownTi++; } else { knownTv++; }
+                    }
+                } else {
+                    numNovel++;
+                    if( datum.isSNP ) {
+                        if ( datum.isTransition ) { novelTi++; } else { novelTv++; }
+                    }
+                }
+            }
+        }
+
+        final double knownTiTv = knownTi / Math.max(1.0 * knownTv, 1.0);
+        final double novelTiTv = novelTi / Math.max(1.0 * novelTv, 1.0);
+
+        final int accessibleTruthSites = VariantDatum.countCallsAtTruth(data, Double.NEGATIVE_INFINITY);
+        final int nCallsAtTruth = VariantDatum.countCallsAtTruth(data, minLod);
+
+        return new VQSLODTranche(minLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, nCallsAtTruth, model, DEFAULT_TRANCHE_NAME);
+    }
+
     /**
      * Returns a list of tranches, sorted from most to least specific, read in from file f.
      * @throws IOException if there are problems reading the file.
