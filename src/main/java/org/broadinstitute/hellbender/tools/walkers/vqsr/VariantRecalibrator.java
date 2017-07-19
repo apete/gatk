@@ -303,6 +303,31 @@ public class VariantRecalibrator extends MultiVariantWalker {
             optional = true)
     private boolean scatterTranches = false;
 
+    /**
+     * Add VQSLOD slices through the call set at the given values, to be used with the -scatterTranches argument. The
+     * default values span from -10 to +10 at varying resolution. The resolution output here will affect the accuracy
+     * with which the gathered tranches are able to match the requested truth sensitivity levels.
+     *
+     * Alternative lists of tranche values should only be used for testing.
+     */
+    @Hidden
+    @Argument(fullName="VQSLODtranche",
+            shortName="VQSLODtranche",
+            doc="The levels of VQSLOD at which to slice the data.",
+            optional=true)
+    private List<Double> VQSLOD_TRANCHES = new ArrayList<>(1000);
+    {
+        for (double i=10.0; i>5; i-=0.1) {
+            VQSLOD_TRANCHES.add(i);
+        }
+        for (double i=5.0; i>-5; i-=0.01) {
+            VQSLOD_TRANCHES.add(i);
+        }
+        for (double i=-5.0; i>-10; i-=0.1) {
+            VQSLOD_TRANCHES.add(i);
+        }
+    };
+
     @Hidden
     @Argument(fullName="replicate",
             shortName="replicate",
@@ -625,7 +650,7 @@ public class VariantRecalibrator extends MultiVariantWalker {
                     tranchesStream.print(Tranche.tranchesString(tranches));
                 }
                 else {
-                    final List<? extends Tranche> tranches = TrancheManager.findVQSLODTranches(dataManager.getData(), VQSLODTranche.VQSLODoutputs, metric, VRAC.MODE);
+                    final List<? extends Tranche> tranches = TrancheManager.findVQSLODTranches(dataManager.getData(), VQSLOD_TRANCHES, metric, VRAC.MODE);
                     tranchesStream.print(VQSLODTranche.printHeader());
                     tranchesStream.print(Tranche.tranchesString(tranches));
                 }

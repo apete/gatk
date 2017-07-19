@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.vqsr;
 
+import org.apache.commons.lang.StringUtils;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.test.IntegrationTestSpec;
@@ -210,7 +211,7 @@ public class VariantRecalibratorIntegrationTest extends CommandLineProgramTest {
                 Arrays.asList(
                         modelReportRecal,
                         modelReportTranches));
-        spec.executeTest("testVariantRecalibratorIndel"+  inputFile, this);
+        spec.executeTest("testVariantRecalibratorSampling"+  inputFile, this);
     }
 
     @Test(dependsOnMethods = {"testVariantRecalibratorSampling"})
@@ -234,7 +235,31 @@ public class VariantRecalibratorIntegrationTest extends CommandLineProgramTest {
                 Arrays.asList(
                         modelReportRecal,
                         modelReportTranches));
-        spec.executeTest("testVariantRecalibratorIndel"+  inputFile, this);
+        spec.executeTest("testVariantRecalibratorModelInput"+  inputFile, this);
+    }
+
+    @Test
+    public void testVariantRecalibratorScattered() throws IOException {
+        final String inputFile = getLargeVQSRTestDataDir() + "phase1.projectConsensus.chr20.1M-10M.raw.snps.vcf";
+
+        final IntegrationTestSpec spec = new IntegrationTestSpec(
+                " --variant " + inputFile +
+                        " -L 20:1,000,000-10,000,000" +
+                        " --resource known,known=true,prior=10.0:" + getLargeVQSRTestDataDir() + "dbsnp_132_b37.leftAligned.20.1M-10M.vcf" +
+                        " --resource truth_training1,truth=true,training=true,prior=15.0:" + getLargeVQSRTestDataDir() + "sites_r27_nr.b37_fwd.20.1M-10M.vcf" +
+                        " --resource truth_training2,training=true,truth=true,prior=12.0:" + getLargeVQSRTestDataDir() + "Omni25_sites_1525_samples.b37.20.1M-10M.vcf" +
+                        " -an QD -an HaplotypeScore -an HRun" +
+                        " --trustAllPolymorphic" + // for speed
+                        " --output %s" +
+                        " -tranchesFile %s" +
+                        " -mode SNP -mG 3" +  //reduce max gaussians so we have negative training data with the sampled input
+                        " -scatterTranches" +
+                        " -VQSLODtranche " + StringUtils.join(Arrays.asList(10.0, 8.0, 6.0, 4.0, 2.0, 0.0, -2.0, -4.0, -6.0, -8.0, -10.0, -12.0), " -VQSLODtranche ") +
+                        " --addOutputVCFCommandLine false",
+                Arrays.asList(
+                        getLargeVQSRTestDataDir() + "/expected/snpRecal.scattered.vcf",  //in theory recal should match basic SNP test, but random number hacks are too painful
+                        getLargeVQSRTestDataDir() + "/expected/snpTranches.scattered.txt"));
+        spec.executeTest("testVariantRecalibratorScattered"+  inputFile, this);
     }
 
 }

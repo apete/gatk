@@ -20,21 +20,6 @@ import static java.util.Collections.sort;
 public class VQSLODTranche extends Tranche {
     private static final int CURRENT_VERSION = 6;
 
-    //TODO: refine these
-    /*public static List<Double> VQSLODoutputs = new ArrayList<>(1000);
-    {
-        for (double i=10.0; i>5; i-=0.1) {
-            VQSLODoutputs.add(i);
-        }
-        for (double i=5.0; i>-5; i-=0.01) {
-            VQSLODoutputs.add(i);
-        }
-        for (double i=-5.0; i>-10; i-=0.1) {
-            VQSLODoutputs.add(i);
-        }
-    };*/
-    public static List<Double> VQSLODoutputs = new ArrayList<>(Arrays.asList(10.0, 8.0, 6.0, 4.0, 2.0, 0.0, -2.0, -4.0, -6.0, -8.0, -10.0, -12.0));
-
     public Double getTrancheIndex() {
         return minVQSLod;
     }
@@ -166,7 +151,7 @@ public class VQSLODTranche extends Tranche {
         List<TruthSensitivityTranche> gatheredTranches = new ArrayList<>();
 
         //make a list of merged tranches of the same length
-        for (final Double VQSLODlevel : VQSLODoutputs) {
+        for (final Double VQSLODlevel : scatteredTranches.keySet()) {
             mergedTranches.add(mergeAndConvertTranches(scatteredTranches.get(VQSLODlevel),mode));
         }
 
