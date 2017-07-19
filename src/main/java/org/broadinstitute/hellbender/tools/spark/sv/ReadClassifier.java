@@ -47,6 +47,7 @@ public class ReadClassifier implements Function<GATKRead, Iterator<BreakpointEvi
 
         final List<BreakpointEvidence> evidenceList = new ArrayList<>();
         checkForSplitRead(read, evidenceList);
+
         checkDiscordantPair(read, evidenceList);
         smallIndelFinder.test(read, evidenceList);
 
@@ -123,6 +124,8 @@ public class ReadClassifier implements Function<GATKRead, Iterator<BreakpointEvi
     }
 
     private void checkDiscordantPair( final GATKRead read, final List<BreakpointEvidence> evidenceList ) {
+        if (! filter.isPrimaryLine(read)) return;
+
         if ( read.mateIsUnmapped() ) {
             evidenceList.add(new BreakpointEvidence.MateUnmapped(read, readMetadata));
         } else {
