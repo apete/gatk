@@ -15,7 +15,7 @@ import java.util.Map;
 /**
  * Created by gauthier on 7/13/17.
  */
-public abstract class Tranche {
+public class Tranche {
 
     protected static final String DEFAULT_TRANCHE_NAME = "anonymous";
     protected static final String COMMENT_STRING = "#";
@@ -92,7 +92,9 @@ public abstract class Tranche {
         }
     }
 
-    public abstract Double getTrancheIndex();
+    public Double getTrancheIndex() {
+        return getTruthSensitivity();
+    }
 
     public <T extends Tranche> String getTrancheString(final T prev) {
             return String.format("%.2f,%d,%d,%.4f,%.4f,%.4f,VQSRTranche%s%.2fto%.2f,%s,%d,%d,%.4f%n",
@@ -100,6 +102,44 @@ public abstract class Tranche {
                     (prev == null ? 0.0 : prev.getTrancheIndex()), getTrancheIndex(), model.toString(), accessibleTruthSites, callsAtTruthSites, getTruthSensitivity());
 
     }
+
+    protected static Tranche trancheOfVariants(final List<VariantDatum> data, final int minI, final double ts, final VariantRecalibratorArgumentCollection.Mode model ) {
+        int numKnown = 0, numNovel = 0, knownTi = 0, knownTv = 0, novelTi = 0, novelTv = 0;
+
+        final double minLod = data.get(minI).lod;
+        for (final VariantDatum datum : data) {
+            if (datum.lod >= minLod) {
+                if (datum.isKnown) {
+                    numKnown++;
+                    if (datum.isSNP) {
+                        if (datum.isTransition) {
+                            knownTi++;
+                        } else {
+                            knownTv++;
+                        }
+                    }
+                } else {
+                    numNovel++;
+                    if (datum.isSNP) {
+                        if (datum.isTransition) {
+                            novelTi++;
+                        } else {
+                            novelTv++;
+                        }
+                    }
+                }
+            }
+        }
+
+        final double knownTiTv = knownTi / Math.max(1.0 * knownTv, 1.0);
+        final double novelTiTv = novelTi / Math.max(1.0 * novelTv, 1.0);
+
+        final int accessibleTruthSites = VariantDatum.countCallsAtTruth(data, Double.NEGATIVE_INFINITY);
+        final int nCallsAtTruth = VariantDatum.countCallsAtTruth(data, minLod);
+
+        return new Tranche("unnamed", knownTiTv, numNovel, minLod, model, novelTiTv, accessibleTruthSites, numKnown, nCallsAtTruth);
+    }
+
 
     protected static double getRequiredDouble(final Map<String, String> bindings, final String key) {
         if ( bindings.containsKey(key) ) {

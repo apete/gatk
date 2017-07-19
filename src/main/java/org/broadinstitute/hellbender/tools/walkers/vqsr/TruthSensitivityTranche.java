@@ -217,32 +217,8 @@ final class TruthSensitivityTranche extends Tranche {
     }
 
     protected static TruthSensitivityTranche trancheOfVariants(final List<VariantDatum> data, final int minI, final double ts, final VariantRecalibratorArgumentCollection.Mode model ) {
-        int numKnown = 0, numNovel = 0, knownTi = 0, knownTv = 0, novelTi = 0, novelTv = 0;
-
-        final double minLod = data.get(minI).lod;
-        for ( final VariantDatum datum : data ) {
-            if ( datum.lod >= minLod ) {
-                if ( datum.isKnown ) {
-                    numKnown++;
-                    if( datum.isSNP ) {
-                        if ( datum.isTransition ) { knownTi++; } else { knownTv++; }
-                    }
-                } else {
-                    numNovel++;
-                    if( datum.isSNP ) {
-                        if ( datum.isTransition ) { novelTi++; } else { novelTv++; }
-                    }
-                }
-            }
-        }
-
-        final double knownTiTv = knownTi / Math.max(1.0 * knownTv, 1.0);
-        final double novelTiTv = novelTi / Math.max(1.0 * novelTv, 1.0);
-
-        final int accessibleTruthSites = VariantDatum.countCallsAtTruth(data, Double.NEGATIVE_INFINITY);
-        final int nCallsAtTruth = VariantDatum.countCallsAtTruth(data, minLod);
-
-        return new TruthSensitivityTranche(ts, minLod, numKnown, knownTiTv, numNovel, novelTiTv, accessibleTruthSites, nCallsAtTruth, model, DEFAULT_TRANCHE_NAME);
+        Tranche basicTranche = Tranche.trancheOfVariants(data, minI, ts, model);
+        return new TruthSensitivityTranche(ts, basicTranche.minVQSLod, basicTranche.numKnown, basicTranche.knownTiTv, basicTranche.numNovel, basicTranche.novelTiTv, basicTranche.accessibleTruthSites, basicTranche.callsAtTruthSites, model, DEFAULT_TRANCHE_NAME);
     }
 
 }
