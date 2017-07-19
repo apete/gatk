@@ -39,7 +39,7 @@ public final class FragmentLengthStatistics {
     public float getPositiveMAD() { return positiveMAD; }
 
     public int getMaxNonOutlierFragmentSize() {
-        return median + ((int) getPositiveMAD()) * 3;
+        return median + ((int) getPositiveMAD()) * 2;
     }
 
     public float getZishScore( final int fragmentSize ) {
