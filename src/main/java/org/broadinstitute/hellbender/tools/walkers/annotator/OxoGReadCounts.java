@@ -39,15 +39,15 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
 
     @Override
     public List<String> getKeyNames() {
-        return Arrays.asList(GATKVCFConstants.OXOG_ALT_F1R2_KEY,
-                             GATKVCFConstants.OXOG_ALT_F2R1_KEY);
+        return Arrays.asList(GATKVCFConstants.F1R2_KEY,
+                             GATKVCFConstants.F2R1_KEY);
     }
 
     @Override
     public List<VCFFormatHeaderLine> getDescriptions() {
         return Arrays.asList(
-                GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_ALT_F1R2_KEY),
-                GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.OXOG_ALT_F2R1_KEY));
+                GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.F1R2_KEY),
+                GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.F2R1_KEY));
     }
 
     @Override
@@ -83,8 +83,8 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
             }
         }
 
-        gb.attribute(GATKVCFConstants.OXOG_ALT_F1R2_KEY, alt_F1R2);
-        gb.attribute(GATKVCFConstants.OXOG_ALT_F2R1_KEY, alt_F2R1);
+        gb.attribute(GATKVCFConstants.F1R2_KEY, alt_F1R2);
+        gb.attribute(GATKVCFConstants.F2R1_KEY, alt_F2R1);
     }
 
     protected static boolean isUsableRead(final GATKRead read) {

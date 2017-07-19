@@ -6,7 +6,6 @@ import htsjdk.variant.vcf.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.engine.ProgressMeter;
-import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.picard.analysis.artifacts.Transition;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -104,8 +103,8 @@ public class OrientationBiasFilterer {
     }
 
     private static double calculateFob(final Genotype genotype, final boolean isRelevantArtifact) {
-        final int altF2R1 = OrientationBiasUtils.getGenotypeInteger(genotype, GATKVCFConstants.OXOG_ALT_F2R1_KEY, 0);
-        final int altF1R2 = OrientationBiasUtils.getGenotypeInteger(genotype, GATKVCFConstants.OXOG_ALT_F1R2_KEY, 0);
+        final int altF2R1 = OrientationBiasUtils.getGenotypeInteger(genotype, GATKVCFConstants.F2R1_KEY, 0);
+        final int altF1R2 = OrientationBiasUtils.getGenotypeInteger(genotype, GATKVCFConstants.F1R2_KEY, 0);
         return (isRelevantArtifact ? altF1R2 : altF2R1) / (double) (altF1R2 + altF2R1);
     }
 
