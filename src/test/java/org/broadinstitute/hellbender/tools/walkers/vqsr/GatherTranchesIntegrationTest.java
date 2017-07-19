@@ -18,10 +18,10 @@ public class GatherTranchesIntegrationTest extends CommandLineProgramTest {
 
     @Test
     public void testCombine2Shards() throws Exception {
-        final File recal1 = new File(testDir + "snpSampledTranches.txt");
-        final File recal2 = new File(testDir + "snpSampledTranches.2.txt");
+        final File recal1 = new File(testDir + "snpTranches.scattered.txt");
+        final File recal2 = new File(testDir + "snpTranches.scattered.2.txt");
 
-        final File recal_original = new File(testDir + "snpSampledTranches.gathered.txt");
+        final File recal_original = new File(testDir + "snpTranches.gathered.txt");
 
         final ArgumentsBuilder args = new ArgumentsBuilder();
         args.add("--input");
