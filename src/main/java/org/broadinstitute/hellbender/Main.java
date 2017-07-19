@@ -2,8 +2,6 @@ package org.broadinstitute.hellbender;
 
 import com.google.cloud.storage.StorageException;
 import htsjdk.samtools.util.StringUtil;
-import org.aeonbits.owner.ConfigCache;
-import org.aeonbits.owner.ConfigFactory;
 import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.hellbender.cmdline.ClassFinder;
 import org.broadinstitute.barclay.argparser.CommandLineException;
@@ -13,7 +11,9 @@ import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.ClassUtils;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.broadinstitute.hellbender.utils.config.ConfigUtils;
 import org.broadinstitute.hellbender.utils.config.MainConfig;
+import org.broadinstitute.hellbender.utils.config.SystemPropertiesConfig;
 
 import java.io.*;
 import java.util.*;
@@ -72,9 +72,14 @@ public class Main {
     private static final String STACK_TRACE_ON_USER_EXCEPTION_PROPERTY = "GATK_STACKTRACE_ON_USER_EXCEPTION";
 
     /**
-     * The option specifying a configuration file.
+     * The option specifying a main configuration file.
      */
-    private static final String configFileOption = "--gatkConfigFile";
+    private static final String mainConfigFileOption = "--gatkConfigFile";
+
+    /**
+     * The option specifying a system configuration file.
+     */
+    private static final String systemPropertiesConfigurationFileOption = "--systemPropertiesConfigFile";
 
     /**
      * Prints the given message (may be null) to the provided stream, adding adornments and formatting.
@@ -146,119 +151,6 @@ public class Main {
     }
 
     /**
-     * Injects system properties from the configuration file.
-     */
-    private void injectSystemPropertiesFromConfig(MainConfig config) {
-
-        // Set all system properties in our config:
-        // TODO: make a convention with either separate files or property names to access these via reflection.
-
-        System.setProperty(
-                "GATK_STACKTRACE_ON_USER_EXCEPTION",
-                Boolean.toString( config.GATK_STACKTRACE_ON_USER_EXCEPTION() )
-        );
-
-        System.setProperty(
-                "samjdk.use_async_io_read_samtools",
-                Boolean.toString(config.samjdk_use_async_io_read_samtools())
-        );
-
-        System.setProperty(
-                "samjdk.use_async_io_write_samtools",
-                Boolean.toString(config.samjdk_use_async_io_write_samtools())
-        );
-
-        System.setProperty(
-                "samjdk.use_async_io_write_tribble",
-                Boolean.toString(config.samjdk_use_async_io_write_tribble())
-        );
-
-        System.setProperty(
-                "samjdk.compression_level",
-                Integer.toString(config.samjdk_compression_level() )
-        );
-
-        System.setProperty(
-                "snappy.disable",
-                Boolean.toString(config.snappy_disable())
-        );
-    }
-
-    /**
-     * Get the configuration file name from the given arguments.
-     * Modifies the given arguments to remove both the configuration file specification string
-     * and the configuration file name from the args.
-     *
-     * NOTE: Does NOT validate that the resulting string is a configuration file.
-     *
-     * @param args Command-line arguments passed to this program.
-     * @return The name of the configuration file for this program or {@code null}.
-     */
-    private String getConfigFilenameFromArgs( final ArrayList<String> args ) {
-
-        String configFileName = null;
-
-        for ( int i = 0 ; i < args.size() ; ++i ) {
-            if (args.get(i).compareTo(configFileOption) == 0) {
-
-                // Get rid of the command-line argument name:
-                args.remove(i);
-
-                if ( i < args.size() ) {
-
-                    // Get and remove the specified config file:
-                    configFileName = args.remove(i);
-                    break;
-                }
-                else {
-                    // No file was specified.
-                    // We cannot work under these conditions:
-
-                    String message = "ERROR: Configuration file not given after config file option specified: " + configFileOption;
-                    System.err.println(message);
-                    throw new RuntimeException(message);
-                }
-            }
-        }
-
-        return configFileName;
-    }
-
-    /**
-     * Initializes and returns the configuration as specified by {@code configFileName}
-     * Also caches this configuration in the {@link ConfigCache} for use elsewhere.
-     * @param configFileName The name of the file from which to initialize the configuration
-     * @return The configuration instance implementing {@link MainConfig} containing any overrides in the given file.
-     */
-    private MainConfig getAndInitializeConfiguration(final String configFileName) {
-
-        // Get a place to store our properties:
-        final Properties userConfigFileProperties = new Properties();
-
-        // Try to get the config from the specified file:
-        if ( configFileName != null ) {
-
-            try {
-                final FileInputStream userConfigFileInputStream = new FileInputStream(configFileName);
-                userConfigFileProperties.load(userConfigFileInputStream);
-            } catch (final FileNotFoundException e) {
-                System.err.println("WARNING: unable to find specified config file: "
-                        + configFileName + " - defaulting to built-in configuration settings.");
-            }
-            catch (final IOException e) {
-                System.err.println("WARNING: unable to load specified config file: "
-                        + configFileName + " - defaulting to built-in configuration settings.");
-            }
-        }
-
-        // Cache and return our configuration:
-        // NOTE: The configuration will be stored in the ConfigCache under the key MainConfig.class.
-        //       This means that any future call to getOrCreate for this MainConfig.class will return
-        //       Not only the configuration itself, but also the overrides as specified in userConfigFileProperties
-        return ConfigCache.getOrCreate(MainConfig.class, userConfigFileProperties);
-    }
-
-    /**
      * The entry point to the toolkit from commandline: it uses {@link #instanceMain(String[])} to run the command line
      * program and handle the returned object with {@link #handleResult(Object)}, and exit with 0.
      * If any error occurs, it handles the exception (if non-user exception, through {@link #handleNonUserException(Exception)})
@@ -271,14 +163,10 @@ public class Main {
         // First we package our args together a little better:
         ArrayList<String> argArrayList = new ArrayList<>( Arrays.asList(args) );
 
-        // Get config from args:
-        final String configFileName = getConfigFilenameFromArgs( argArrayList );
-
-        // Get our config file:
-        MainConfig mainConfig = getAndInitializeConfiguration(configFileName);
-
-        // To start with we inject our system properties to ensure they are defined for downstream components:
-        injectSystemPropertiesFromConfig(mainConfig);
+        // Now we setup our configurations:
+        ConfigUtils.initializeConfigurationsFromCommandLineArgs(argArrayList,
+                mainConfigFileOption,
+                systemPropertiesConfigurationFileOption);
 
         final CommandLineProgram program = extractCommandLineProgram(argArrayList.toArray(new String[] {}), getPackageList(), getClassList(), getCommandLineName());
         try {
