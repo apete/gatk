@@ -14,14 +14,14 @@ import java.io.File;
  */
 public class GatherTranchesIntegrationTest extends CommandLineProgramTest {
 
-    private static final String testDir = BaseTest.publicTestDir + "/large/VQSR/expected/";
+    private static final String testDir = BaseTest.publicTestDir + "/large/VQSR/";
 
     @Test
     public void testCombine2Shards() throws Exception {
         final File recal1 = new File(testDir + "snpTranches.scattered.txt");
         final File recal2 = new File(testDir + "snpTranches.scattered.2.txt");
 
-        final File recal_original = new File(testDir + "snpTranches.gathered.txt");
+        final File recal_original = new File(testDir + "expected/snpTranches.gathered.txt");
 
         final ArgumentsBuilder args = new ArgumentsBuilder();
         args.add("--input");
