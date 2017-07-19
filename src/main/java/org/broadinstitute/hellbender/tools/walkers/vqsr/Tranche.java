@@ -94,8 +94,7 @@ public abstract class Tranche {
 
     public abstract Double getTrancheIndex();
 
-    //TODO: naming is wrong from VQSLODTranche
-    public <T extends Tranche> String getTrancheString(T prev) {
+    public <T extends Tranche> String getTrancheString(final T prev) {
             return String.format("%.2f,%d,%d,%.4f,%.4f,%.4f,VQSRTranche%s%.2fto%.2f,%s,%d,%d,%.4f%n",
                     getTrancheIndex(), numKnown, numNovel, knownTiTv, novelTiTv, minVQSLod, model.toString(),
                     (prev == null ? 0.0 : prev.getTrancheIndex()), getTrancheIndex(), model.toString(), accessibleTruthSites, callsAtTruthSites, getTruthSensitivity());

@@ -17,11 +17,6 @@ import java.util.*;
 final class TruthSensitivityTranche extends Tranche {
     private static final int CURRENT_VERSION = 5;
 
-    private static final String DEFAULT_TRANCHE_NAME = "anonymous";
-    private static final String COMMENT_STRING = "#";
-    private static final String VALUE_SEPARATOR = ",";
-    private static final int EXPECTED_COLUMN_COUNT = 11;
-
     static final Comparator<TruthSensitivityTranche> TRUTH_SENSITIVITY_ORDER = (tranche1, tranche2) -> Double.compare(tranche1.targetTruthSensitivity, tranche2.targetTruthSensitivity);
 
     private static final Logger logger = LogManager.getLogger(TruthSensitivityTranche.class);

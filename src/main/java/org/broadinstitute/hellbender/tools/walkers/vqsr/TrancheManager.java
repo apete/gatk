@@ -130,7 +130,7 @@ public class TrancheManager {
         Collections.sort( data, VariantDatum.VariantDatumLODComparator );
         metric.calculateRunningMetric(data);
 
-        List<VQSLODTranche> tranches = new ArrayList<>();
+        final List<VQSLODTranche> tranches = new ArrayList<>();
         for ( double trancheThreshold : trancheThresholds ) {
             VQSLODTranche t = findVQSLODTranche(data, metric, trancheThreshold, model);
 
@@ -174,12 +174,12 @@ public class TrancheManager {
             final VariantRecalibratorArgumentCollection.Mode model ) {
         logger.info(String.format("  TruthSensitivityTranche threshold %.2f => selection metric threshold %.3f", trancheThreshold, metric.getThreshold(trancheThreshold)));
 
-        double metricThreshold = metric.getThreshold(trancheThreshold);
-        int n = data.size();
+        final double metricThreshold = metric.getThreshold(trancheThreshold);
+        final int n = data.size();
         for ( int i = 0; i < n; i++ ) {
             if ( metric.getRunningMetric(i) >= metricThreshold ) {
                 // we've found the largest group of variants with sensitivity >= our target truth sensitivity
-                TruthSensitivityTranche t = TruthSensitivityTranche.trancheOfVariants(data, i, trancheThreshold, model);
+                final TruthSensitivityTranche t = TruthSensitivityTranche.trancheOfVariants(data, i, trancheThreshold, model);
                 logger.info(String.format("  Found tranche for %.3f: %.3f threshold starting with variant %d; running score is %.3f ",
                         trancheThreshold, metricThreshold, i, metric.getRunningMetric(i)));
                 logger.info(String.format("  TruthSensitivityTranche is %s", t));
@@ -197,12 +197,12 @@ public class TrancheManager {
             final VariantRecalibratorArgumentCollection.Mode model ) {
         logger.info(String.format("  VQSLODTranche threshold %.2f => selection metric threshold %.3f", trancheThreshold, metric.getThreshold(trancheThreshold)));
 
-        double metricThreshold = metric.getThreshold(trancheThreshold);
-        int n = data.size();
+        final double metricThreshold = metric.getThreshold(trancheThreshold);
+        final int n = data.size();
         for ( int i = 0; i < n; i++ ) {
             if ( data.get(i).lod >= trancheThreshold ) {
                 // we've found the largest group of variants with LOD >= our target LOD
-                VQSLODTranche t = VQSLODTranche.trancheOfVariants(data, i, trancheThreshold, model);
+                final VQSLODTranche t = VQSLODTranche.trancheOfVariants(data, i, trancheThreshold, model);
                 logger.info(String.format("  Found tranche for %.3f: %.3f threshold starting with variant %d; running score is %.3f ",
                         trancheThreshold, metricThreshold, i, metric.getRunningMetric(i)));
                 logger.info(String.format("  VQSLODTranche is %s", t));

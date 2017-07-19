@@ -6,7 +6,7 @@ import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
-import org.broadinstitute.hellbender.cmdline.programgroups.ReadProgramGroup;
+import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
 import org.broadinstitute.hellbender.exceptions.UserException;
 
 import java.io.File;
@@ -16,9 +16,10 @@ import java.io.PrintStream;
 import java.util.*;
 
 @CommandLineProgramProperties(
-        summary = "Gathers scattered VQSLOD tranches into a single file",
+        summary = "Gathers scattered VQSLOD tranches into a single file. For use when running VariantRecalibrator on " +
+                "scattered input using the -scatterTranches mode.",
         oneLineSummary = "Gathers scattered VQSLOD tranches into a single file",
-        programGroup = ReadProgramGroup.class
+        programGroup = VariantProgramGroup.class
 )
 @DocumentedFeature
 public class GatherTranches extends CommandLineProgram {
@@ -59,16 +60,13 @@ public class GatherTranches extends CommandLineProgram {
             throw new UserException.CouldNotCreateOutputFile(outputReport, e);
         }
 
-
         //use a data structure to hold the tranches from each scatter shard in a format that's easy to merge
         final Map<Double, List<VQSLODTranche>> scatteredTranches = new HashMap<>();
         for (final File trancheFile : inputReports) {
             try {
-                List<VQSLODTranche> shardTranches = VQSLODTranche.readTranches(trancheFile);
-                for (final VQSLODTranche currentTranche : shardTranches) {
+                for (final VQSLODTranche currentTranche : VQSLODTranche.readTranches(trancheFile)) {
                     if (scatteredTranches.containsKey(currentTranche.minVQSLod)) {
-                        final List<VQSLODTranche> toAdd = scatteredTranches.get(currentTranche.minVQSLod);
-                        toAdd.add(currentTranche);
+                        scatteredTranches.get(currentTranche.minVQSLod).add(currentTranche);
                     }
                     else {
                         scatteredTranches.put(currentTranche.minVQSLod, new ArrayList<>(Arrays.asList(currentTranche)));

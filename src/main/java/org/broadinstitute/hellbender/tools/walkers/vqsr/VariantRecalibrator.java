@@ -289,13 +289,23 @@ public class VariantRecalibrator extends MultiVariantWalker {
      * --maxNumTrainingData, reading in additional data to build the model only serves to consume resources. However,
      * with this argument the output recal file will also be downsampled. The recommended VQSR procedure when using this
      * argument is to run VariantRecalibrator once with sampling and designate an --output_model file. Then
-     * VariantRecalibrator can be run a second time scattered using that file as an --input_model.  The gather of the recal
+     * VariantRecalibrator can be run a second time scattered using the -scatterTranches argument and that file as an
+     * --input_model.  The scattered recal files can be gathered with the GatherVcfs tool and the scattered tranches can
+     * be gathered with the GatherTranches tool.
+     *
      */
     @Argument(fullName="sample_every_Nth_variant",
             shortName = "sampleEvery",
             doc="If specified, the variant recalibrator will use (and output) only a subset of variants consisting of every Nth variant where N is specified by this argument; for use with -outputModel -- see argument details",
             optional=true)
     private int sampleMod = 1;
+
+    /**
+     *  This argument must be specified if VariantRecalibrator is run scattered because the tranch output format changes.
+     *  The scattered recal files can be gathered with the GatherVcfs tool and the scattered tranches can be gathered
+     *  with the GatherTranches tool. See the description of the -sampleEvery argument for more information on running
+     *  scattered VariantRecalibrator.
+     */
 
     @Argument(fullName="output_tranches_for_scatter",
             shortName = "scatterTranches",
@@ -375,7 +385,7 @@ public class VariantRecalibrator extends MultiVariantWalker {
     private final VariantRecalibratorEngine engine = new VariantRecalibratorEngine( VRAC );
     final private ExpandingArrayList<VariantDatum> reduceSum = new ExpandingArrayList<>(2000);
     final private List<ImmutablePair<VariantContext, FeatureContext>> variantsAtLocus = new ArrayList<>();
-    private int counter = 0;
+    private long counter = 0;
     private GATKReportTable nmcTable;
     private GATKReportTable nmmTable;
     private GATKReportTable nPMixTable;
