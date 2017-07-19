@@ -62,7 +62,8 @@ public abstract class Tranche {
     public static class TrancheComparator<T extends Tranche> implements Comparator<T> {
         @Override
         public int compare(final T tranche1, final T tranche2) {
-            return Double.compare(tranche1.minVQSLod, tranche2.minVQSLod);
+            //no matter what type of tranche we have, we want the output in order of increasing sensitivity, as measured by calls at truth sites
+            return Double.compare(tranche1.callsAtTruthSites, tranche2.callsAtTruthSites);
         }
     }
 
