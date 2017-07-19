@@ -1,11 +1,13 @@
-package org.broadinstitute.hellbender.utils.Config;
+package org.broadinstitute.hellbender.utils.config;
 
+import org.aeonbits.owner.ConfigFactory;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.utils.config.ConfigUtils;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -84,6 +86,47 @@ public class ConfigUnitTest {
 
         Assert.assertEquals(expectedFilename, outFileName);
         Assert.assertEquals(expectedRemainingArgs, args);
+    }
+
+    @Test
+    void testInitializeConfiguration() {
+        String inputPropertiesFile = "src/test/resources/org/broadinstitute/hellbender/utils/config/AdditionalTestOverrides.properties";
+
+        BasicTestConfig basicTestConfig = ConfigUtils.initializeConfiguration(inputPropertiesFile, BasicTestConfig.class);
+
+        // Check for our values:
+        Assert.assertEquals(basicTestConfig.booleanDefFalse(), false);
+        Assert.assertEquals(basicTestConfig.booleanDefTrue(), true);
+        Assert.assertEquals(basicTestConfig.intDef207(), 999);
+        Assert.assertEquals(basicTestConfig.listOfStringTest(), new ArrayList<>(Arrays.asList(new String[] {"string1", "string2", "string3", "string4"})));
+
+    }
+
+    @Test
+    void testOwnerConfiguration() {
+
+        // Test with our basic test class:
+        BasicTestConfig basicTestConfig = ConfigFactory.create(BasicTestConfig.class);
+
+        Assert.assertEquals(basicTestConfig.booleanDefFalse(), false);
+        Assert.assertEquals(basicTestConfig.booleanDefTrue(), true);
+        Assert.assertEquals(basicTestConfig.intDef207(), 207);
+        Assert.assertEquals(basicTestConfig.listOfStringTest(), new ArrayList<>(Arrays.asList(new String[] {"string1", "string2", "string3", "string4"})));
+
+    }
+
+    @Test
+    void testOwnerConfigurationWithClassPathOverrides() {
+
+        // Test with the class that overrides on the class path:
+        BasicTestConfigWithClassPathOverrides basicTestConfigWithClassPathOverrides =
+                ConfigFactory.create(BasicTestConfigWithClassPathOverrides.class);
+
+        Assert.assertEquals(basicTestConfigWithClassPathOverrides.booleanDefFalse(), true);
+        Assert.assertEquals(basicTestConfigWithClassPathOverrides.booleanDefTrue(), false);
+        Assert.assertEquals(basicTestConfigWithClassPathOverrides.intDef207(), 702);
+        Assert.assertEquals(basicTestConfigWithClassPathOverrides.listOfStringTest(), new ArrayList<>(Arrays.asList(new String[] {"string4", "string3", "string2", "string1"})));
+
     }
 
 }

@@ -215,7 +215,8 @@ processResources {
 processTestResources {
     //Don't waste time packaging our test data into the test jar
     exclude "**/large/**"
-    exclude "**/org/broadinstitute/hellbender/**"
+    //TODO: DON"T MERGE THIS!!!!!!!!11!!!11!!!
+//    exclude "**/org/broadinstitute/hellbender/**"
 }
 
 sourceCompatibility = 1.8

@@ -11,8 +11,7 @@ import org.aeonbits.owner.Config.Sources;
  * All options in this class are intended to be injected into the JRE as System Properties.
  */
 @LoadPolicy(LoadType.MERGE)
-@Sources({ "${SYSTEM_PROPERTIES_CONFIG_FILE}",                                         // User-defined path
-        "file:SystemProperties.config",                                                     // Default path
+@Sources({ "file:SystemProperties.config",                                                     // Default path
         "classpath:org/broadinstitute/hellbender/utils/config/SystemProperties.config" })   // Class path
 public interface SystemPropertiesConfig extends Mutable, Accessible {
 
