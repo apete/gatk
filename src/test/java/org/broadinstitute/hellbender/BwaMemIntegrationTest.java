@@ -34,9 +34,4 @@ public class BwaMemIntegrationTest extends BaseTest {
         BwaMemTestUtils.assertCorrectChimericContigAlignment(index);
     }
 
-    @Test
-    public void dummy() throws Exception {
-        Assert.assertEquals(1,0);
-    }
-
 }

@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.picard.sam;
 
 import org.broadinstitute.hellbender.CommandLineProgramTest;
+import org.broadinstitute.hellbender.tools.spark.sv.SVKmer;
 import org.broadinstitute.hellbender.utils.test.ArgumentsBuilder;
 import org.broadinstitute.hellbender.utils.test.IntegrationTestSpec;
 import org.broadinstitute.hellbender.utils.test.BaseTest;
@@ -10,6 +11,9 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 public final class CalculateReadGroupChecksumIntegrationTest extends CommandLineProgramTest {
     private static final File TEST_DATA_DIR = new File(getTestDataDir(), "picard/sam/CalculateReadGroupChecksum");
@@ -44,10 +48,12 @@ public final class CalculateReadGroupChecksumIntegrationTest extends CommandLine
     public void testNoOutputName() throws IOException {
         final File input = new File(TEST_DATA_DIR, "first5000a.bam");
         final File expectedFile = new File(TEST_DATA_DIR, "first5000a.CalculateReadGroupChecksum.txt");   //file created using picard 1.130
-        final File outfile =  new File(input.getParentFile(), CalculateReadGroupChecksum.getOutputFileName(input));
+        File copiedInputTemp = createTempFile("first5000a", ".bam");  // copied to a temp location so output is kept out of test resources
+        Files.copy(input.toPath(), copiedInputTemp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        final File outfile =  new File(copiedInputTemp.getParentFile(), CalculateReadGroupChecksum.getOutputFileName(copiedInputTemp));
         outfile.deleteOnExit();
         final String[] args = new String[]{
-                "--input", input.getAbsolutePath()
+                "--input", copiedInputTemp.getAbsolutePath()
         };
         runCommandLine(args);
 
