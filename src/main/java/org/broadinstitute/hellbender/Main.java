@@ -12,8 +12,6 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.ClassUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.config.ConfigUtils;
-import org.broadinstitute.hellbender.utils.config.MainConfig;
-import org.broadinstitute.hellbender.utils.config.SystemPropertiesConfig;
 
 import java.io.*;
 import java.util.*;
@@ -74,7 +72,7 @@ public class Main {
     /**
      * The option specifying a main configuration file.
      */
-    private static final String mainConfigFileOption = "--gatkConfigFile";
+    private static final String gatkConfigFileOption = "--gatkConfigFile";
 
     /**
      * The option specifying a system configuration file.
@@ -165,7 +163,7 @@ public class Main {
 
         // Now we setup our configurations:
         ConfigUtils.initializeConfigurationsFromCommandLineArgs(argArrayList,
-                mainConfigFileOption,
+                gatkConfigFileOption,
                 systemPropertiesConfigurationFileOption);
 
         final CommandLineProgram program = extractCommandLineProgram(argArrayList.toArray(new String[] {}), getPackageList(), getClassList(), getCommandLineName());

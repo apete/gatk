@@ -9,9 +9,7 @@ import static java.nio.file.StandardCopyOption.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -21,6 +19,12 @@ import java.util.Arrays;
  * Created by jonn on 7/19/17.
  */
 public class ConfigUnitTest {
+
+    // ================================================================================
+    // Helper Methods:
+    // ================================================================================
+
+
 
     // ================================================================================
     // Data Providers:
@@ -160,4 +164,26 @@ public class ConfigUnitTest {
         Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.listOfStringTest(), new ArrayList<>(Arrays.asList(new String[] {"string4", "string3", "string2", "string1"})));
     }
 
+    @Test
+    void testOwnerConfigurationWithClassPathOverridesAndVariableFileInput_NoGivenFile() throws IOException {
+
+        // Start with the name of the properties file to copy:
+        String overrideFilename = "AdditionalTestOverrides.properties";
+
+        // Create a temporary folder in which to place the config file:
+        final File outputDir = Files.createTempDirectory("testOwnerConfigurationWithClassPathOverridesAndVariableFileInput").toAbsolutePath().toFile();
+        outputDir.deleteOnExit();
+
+        // Set our file location here:
+        ConfigFactory.setProperty("pathToConfigFile", outputDir.getAbsolutePath() + File.separator + overrideFilename);
+
+        // Test with the class that overrides on the class path:
+        BasicTestConfigWithClassPathOverridesAndVariableFile basicTestConfigWithClassPathOverridesAndVariableFile =
+                ConfigFactory.create(BasicTestConfigWithClassPathOverridesAndVariableFile.class);
+
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.booleanDefFalse(), true);
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.booleanDefTrue(), false);
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.intDef207(), 702);
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.listOfStringTest(), new ArrayList<>(Arrays.asList(new String[] {"string4", "string3", "string2", "string1"})));
+    }
 }

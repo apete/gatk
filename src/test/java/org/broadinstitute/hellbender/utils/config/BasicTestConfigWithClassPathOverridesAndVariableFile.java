@@ -12,6 +12,7 @@ import java.util.List;
 @Config.LoadPolicy(Config.LoadType.MERGE)
 @Config.Sources({
         "file:${pathToConfigFile}",
+        "file:/etc/jaiow",                          // Test of non-existent bad path
         "classpath:org/broadinstitute/hellbender/utils/config/BasicTestConfigWithClassPathOverrides.properties",
 })
 public interface BasicTestConfigWithClassPathOverridesAndVariableFile extends Mutable, Accessible {
