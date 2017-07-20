@@ -27,7 +27,7 @@ import org.broadinstitute.hellbender.transformers.ReadTransformer;
 import org.broadinstitute.hellbender.utils.SequenceDictionaryUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.config.MainConfig;
+import org.broadinstitute.hellbender.utils.config.GATKConfig;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
@@ -265,69 +265,70 @@ public abstract class GATKTool extends CommandLineProgram {
     }
 
     /**
-     * @return The cloud prefetch buffer size as set in {@link org.broadinstitute.hellbender.utils.config.MainConfig}
+     * @return The cloud prefetch buffer size as set in {@link GATKConfig}
      */
     public int getCloudPrefetchBufferSize() {
 
         // Get our configuration:
-        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+        final GATKConfig config = ConfigCache.getOrCreate( GATKConfig.class );
 
         return config.cloudPrefetchBuffer();
     }
 
     /**
-     * @return The cloud index prefetch buffer size as set in {@link org.broadinstitute.hellbender.utils.config.MainConfig}
+     * @return The cloud index prefetch buffer size as set in {@link GATKConfig}
      *         A return value of -1 means to use the same value as returned by {@link #getCloudPrefetchBufferSize()}.
      */
     public int getCloudIndexPrefetchBufferSize() {
 
         // Get our configuration:
-        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+        final GATKConfig config = ConfigCache.getOrCreate( GATKConfig.class );
 
         return config.cloudIndexPrefetchBuffer();
     }
 
     /**
-     * @return The cloud index prefetch buffer size as set in {@link org.broadinstitute.hellbender.utils.config.MainConfig}
+     * @return The cloud index prefetch buffer size as set in {@link GATKConfig}
      *         A return value of -1 means to use the same value as returned by {@link #getCloudPrefetchBufferSize()}.
      */
     private boolean getCreateOutputBamIndexFrom() {
 
         // Get our configuration:
-        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+        final GATKConfig config = ConfigCache.getOrCreate( GATKConfig.class );
 
         return config.createOutputBamIndex();
     }
 
     /**
-     * Get the given key from a {@link MainConfig} class.
-     * @param key The key in the {@link MainConfig} to get.
+     * Get the given key from a {@link GATKConfig} class.
+     * @param key The key in the {@link GATKConfig} to get.
      * @param <T> The type of the key to obtain.
      * @return The value for the specified {@code key}.
      */
+    @SuppressWarnings("unchecked")
     private <T> T getFromMainConfig(String key) {
 
         // Get our configuration:
-        final MainConfig config = ConfigCache.getOrCreate( MainConfig.class );
+        final GATKConfig config = ConfigCache.getOrCreate( GATKConfig.class );
 
         try {
-            for (Method m : MainConfig.class.getDeclaredMethods()) {
-                if (m.getName().compareTo(key) == 0) {
+            for (Method m : GATKConfig.class.getDeclaredMethods()) {
+                if (m.getName().equals(key)) {
                     return (T) m.invoke(config);
                 }
             }
         }
         catch (IllegalAccessException e) {
             // We shouldn't need to worry about this one, but just in case:
-            logger.fatal("Could not access the given key from MainConfig class: " + key);
+            logger.fatal("Could not access the given key from GATKConfig class: " + key);
         }
         catch (InvocationTargetException e) {
-            logger.fatal("Could not resolve the given key from MainConfig class: " + key);
+            logger.fatal("Could not resolve the given key from GATKConfig class: " + key);
         }
 
         // This should never happen.
         // If it does, throw an exception:
-        throw new RuntimeException("Unable to retrieve property, " + key + ",from configuration: " + MainConfig.class.toString());
+        throw new RuntimeException("Unable to retrieve property, " + key + ",from configuration: " + GATKConfig.class.toString());
     }
 
     /**

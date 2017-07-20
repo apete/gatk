@@ -22,7 +22,7 @@ import java.util.List;
         "file:Main.config",                                                     // Default path
         "classpath:org/broadinstitute/hellbender/utils/config/Main.config"      // Class path
 })
-public interface MainConfig extends Mutable, Accessible {
+public interface GATKConfig extends Mutable, Accessible {
 
     // =================================================================================
     // General Options:

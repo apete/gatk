@@ -78,7 +78,7 @@ public class ConfigUtils {
         final String systemConfigFileName = getConfigFilenameFromArgs( argList, systemPropertiesConfigurationFileOption );
 
         // Alternate way to load the config file:
-        MainConfig mainConfig = ConfigUtils.initializeConfiguration( systemConfigFileName, MainConfig.class );
+        GATKConfig gatkConfig = ConfigUtils.initializeConfiguration( systemConfigFileName, GATKConfig.class );
 
         // NOTE: Alternate way to load the config file:
         SystemPropertiesConfig systemPropertiesConfig = ConfigUtils.initializeConfiguration( systemConfigFileName, SystemPropertiesConfig.class );
@@ -92,7 +92,7 @@ public class ConfigUtils {
      * Also caches this configuration in the {@link ConfigCache} for use elsewhere.
      * @param configFileName The name of the file from which to initialize the configuration
      * @param configClass The type of configuration in which to interpret the given {@code configFileName}
-     * @return The configuration instance implementing {@link MainConfig} containing any overrides in the given file.
+     * @return The configuration instance implementing {@link GATKConfig} containing any overrides in the given file.
      */
     public static final <T extends Config> T initializeConfiguration(final String configFileName, Class<? extends T> configClass) {
 
@@ -116,15 +116,15 @@ public class ConfigUtils {
         }
 
         // Cache and return our configuration:
-        // NOTE: The configuration will be stored in the ConfigCache under the key MainConfig.class.
-        //       This means that any future call to getOrCreate for this MainConfig.class will return
+        // NOTE: The configuration will be stored in the ConfigCache under the key GATKConfig.class.
+        //       This means that any future call to getOrCreate for this GATKConfig.class will return
         //       Not only the configuration itself, but also the overrides as specified in userConfigFileProperties
         return ConfigCache.getOrCreate(configClass, userConfigFileProperties);
     }
 
     /**
      * Injects system properties from the given configuration file.
-     * @param config The {@link MainConfig} object from which to inject system properties.
+     * @param config The {@link GATKConfig} object from which to inject system properties.
      */
     public static final void injectSystemPropertiesFromSystemConfig(SystemPropertiesConfig config) {
 
