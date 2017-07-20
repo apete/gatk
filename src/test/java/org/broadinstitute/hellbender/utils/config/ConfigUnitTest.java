@@ -5,9 +5,13 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import static java.nio.file.StandardCopyOption.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -126,7 +130,34 @@ public class ConfigUnitTest {
         Assert.assertEquals(basicTestConfigWithClassPathOverrides.booleanDefTrue(), false);
         Assert.assertEquals(basicTestConfigWithClassPathOverrides.intDef207(), 702);
         Assert.assertEquals(basicTestConfigWithClassPathOverrides.listOfStringTest(), new ArrayList<>(Arrays.asList(new String[] {"string4", "string3", "string2", "string1"})));
+    }
 
+    @Test
+    void testOwnerConfigurationWithClassPathOverridesAndVariableFileInput() throws IOException {
+
+        // Start with the name of the properties file to copy:
+        String overrideFilename = "AdditionalTestOverrides.properties";
+
+        // Create a temporary folder in which to place the config file:
+        final File outputDir = Files.createTempDirectory("testOwnerConfigurationWithClassPathOverridesAndVariableFileInput").toAbsolutePath().toFile();
+        outputDir.deleteOnExit();
+
+        // Put the known config file in the new directory:
+        Files.copy(new File("src/test/resources/org/broadinstitute/hellbender/utils/config/" + overrideFilename).toPath(),
+                new File(outputDir.getAbsolutePath() + File.separator + overrideFilename).toPath(),
+                REPLACE_EXISTING);
+
+        // Set our file location here:
+        ConfigFactory.setProperty("pathToConfigFile", outputDir.getAbsolutePath() + File.separator + overrideFilename);
+
+        // Test with the class that overrides on the class path:
+        BasicTestConfigWithClassPathOverridesAndVariableFile basicTestConfigWithClassPathOverridesAndVariableFile =
+                ConfigFactory.create(BasicTestConfigWithClassPathOverridesAndVariableFile.class);
+
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.booleanDefFalse(), true);
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.booleanDefTrue(), false);
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.intDef207(), 999);
+        Assert.assertEquals(basicTestConfigWithClassPathOverridesAndVariableFile.listOfStringTest(), new ArrayList<>(Arrays.asList(new String[] {"string4", "string3", "string2", "string1"})));
     }
 
 }

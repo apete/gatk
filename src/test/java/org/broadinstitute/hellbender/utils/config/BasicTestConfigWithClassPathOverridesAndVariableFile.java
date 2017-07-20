@@ -11,9 +11,10 @@ import java.util.List;
  */
 @Config.LoadPolicy(Config.LoadType.MERGE)
 @Config.Sources({
+        "file:${pathToConfigFile}",
         "classpath:org/broadinstitute/hellbender/utils/config/BasicTestConfigWithClassPathOverrides.properties",
 })
-public interface BasicTestConfigWithClassPathOverrides extends Mutable, Accessible {
+public interface BasicTestConfigWithClassPathOverridesAndVariableFile extends Mutable, Accessible {
 
     @DefaultValue("true")
     boolean booleanDefTrue();
