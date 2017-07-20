@@ -5,7 +5,7 @@ import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.*;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.broadinstitute.hellbender.utils.GATKProtectedVariantContextUtils;
+import org.broadinstitute.hellbender.tools.exome.orientationbiasvariantfilter.OrientationBiasUtils;
 import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.genotyper.*;
 import org.broadinstitute.hellbender.utils.read.ArtificialReadUtils;
@@ -92,10 +92,10 @@ public final class OxoGReadCountsUnitTest {
         final ReadLikelihoods<Allele> likelihoods = pair.getRight();
         final GenotypeBuilder gb = new GenotypeBuilder(g);
         new OxoGReadCounts().annotate(null, vc, g, gb, likelihoods);
-        final int actual_alt_F1R2 = getF1R2(g)[0];
+        final int actual_alt_F1R2 = OrientationBiasUtils.getF1R2(gb.make())[0];
         Assert.assertEquals(actual_alt_F1R2, alt_F1R2, GATKVCFConstants.F1R2_KEY);
 
-        final int actual_alt_F2R1 = getF2R1(g)[0];
+        final int actual_alt_F2R1 = OrientationBiasUtils.getF2R1(gb.make())[0];
         Assert.assertEquals(actual_alt_F2R1, alt_F2R1, GATKVCFConstants.F2R1_KEY);
 
         //now test a no-op
@@ -134,11 +134,4 @@ public final class OxoGReadCountsUnitTest {
         return read;
     }
 
-    private int[] getF1R2(final Genotype g) {
-        return GATKProtectedVariantContextUtils.getAttributeAsIntArray(g, GATKVCFConstants.F1R2_KEY, () -> null, 0);
-    }
-
-    private int[] getF2R1(final Genotype g) {
-        return GATKProtectedVariantContextUtils.getAttributeAsIntArray(g, GATKVCFConstants.F2R1_KEY, () -> null, 0);
-    }
 }
