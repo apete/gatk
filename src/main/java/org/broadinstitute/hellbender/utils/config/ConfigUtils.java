@@ -105,13 +105,18 @@ public class ConfigUtils {
             try {
                 final FileInputStream userConfigFileInputStream = new FileInputStream(configFileName);
                 userConfigFileProperties.load(userConfigFileInputStream);
+
+                if (configFileName != null) {
+                    System.out.println("Found " + configClass.getSimpleName() + " Configuration File: " + configFileName);
+                }
+
             } catch (final FileNotFoundException e) {
-                System.err.println("WARNING: unable to find specified config file: "
-                        + configFileName + " - defaulting to built-in configuration settings.");
+                System.err.println("WARNING: unable to find specified " + configClass.getSimpleName() + " configuration file: "
+                        + configFileName + " - defaulting to built-in config settings.");
             }
             catch (final IOException e) {
-                System.err.println("WARNING: unable to load specified config file: "
-                        + configFileName + " - defaulting to built-in configuration settings.");
+                System.err.println("WARNING: unable to load specified " + configClass.getSimpleName() + " configuration file: "
+                        + configFileName + " - defaulting to built-in config settings.");
             }
         }
 
