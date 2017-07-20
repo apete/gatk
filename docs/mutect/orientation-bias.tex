@@ -116,14 +116,14 @@ Why wouldn't this artifact appear in a F2R1 read? Well, to have an F2R1 read
 
 
 \section{The generative model}
-\section{The graphical model}
+
 The probabilistic model consists of the following random variables. For each reference context $i$ - that is, for every $k$-mer in the reference - the discrete latent variable $z$ represents the state of the site with respect to the degree of orientation-bias 
 
-\begin{equation}
+\begin{equation*}
 z \in \{ \mathrm{F1R2}, \mathrm{F2R1}, \mathrm{Balanced Hom Ref}, \mathrm{ Balanced Het }, \mathrm{ Balanced Hom Var } \}
-\end{equation}
+\end{equation*}
 
-$z \sim \mathrm{Categorical}(\pi_c)$, where $\pi_{ck}$ is the context dependent prior probability of kth component $Z$ and thus satisfies $\sum_k \pi_{ck} = 1$, where $k \in [1, |Z|]$. The number of ALT allele at the site, $m$, depends on the state $z$. We explicitly model the number of ALT alleles because its dependence on $z$ encapsulates our knowledge that, when orientation bias is present, we \textit{always} have some number of (artifactual) ALT reads at the site. In other words, if we do not observe ALT reads at all (i.e. $z = \mathrm{Hom ref}$), we cannot have orientation bias at the site. $m|z \sim \mathrm{Binom(p_z)}$. We then model the number of $F1R2$ reads among the $m$ ALT reads as $x|m \sim \mathrm{Binom(\theta_z)}$, parameterized by the the parameter $\theta$ that depends on the state $z$. 
+$z \sim \mathrm{Categorical}(\vpi_c)$, where $\pi_{ck}$ is the context dependent prior probability of kth component $Z$ and thus satisfies $\sum_k \pi_{ck} = 1$, where $k \in [1, |Z|]$. The number of ALT allele at the site, $m$, depends on the state $z$. We explicitly model the number of ALT alleles because its dependence on $z$ encapsulates our knowledge that, when orientation bias is present, we \textit{always} have some number of (artifactual) ALT reads at the site. In other words, if we do not observe ALT reads at all (i.e. $z = \mathrm{Hom ref}$), we cannot have orientation bias at the site. $m|z \sim \mathrm{Binom(p_z)}$. We then model the number of $F1R2$ reads among $m$ ALT reads as $x|m \sim \mathrm{Binom(\vtheta_z)}$, parameterized by $\vtheta_z$ that depends on whether the site suffers from orientation bias or, in other words, depends on the $z$. 
 
 \begin{figure}
 \centering
@@ -135,58 +135,86 @@ What does the model know? What doesn't it know?
 
 %%%
 \subsection{EM algorithm}
-We may use the EM algorithm to estimate the hyperparameters $\vpi$, $\vp$. We can then compute the posterior probability of the latent variable $z$ to determine whether a variant is an orientation artifact and thus should be filtered.
+We may use the EM algorithm to estimate the hyperparameters $\vpi$ and $\vp$. We can then compute the posterior probability of the latent variable $z$ to determine whether a variant is an orientation artifact and thus should be filtered.
 
 \subsubsection{E step}
-In the E step, we compute the responsibility of the $k$th mixture component $\gamma_{nk} = p(z_k | x_n, m_n)$, which is the posterior probability of $k$th component of $z$ given observable variables $x_n$ and $m_n$. By Bayes rule we have
+In the E step, we compute the responsibility of the $k$th component of $z$, denoted $\gamma_{nk} = p(z_{nk} | x_n, m_n)$. $\gamma_{nk}$ is the posterior probability of $k$th component of $z$ given the observed variables $x_n$ and $m_n$. By Bayes rule we have
 
 \begin{align}
-\gamma^*_{nk} &\propto p(z_{k} | x_n) \\
-		        &\propto p(z_{k}) p(m_n | z_k, p_{z} ) p(x_n | m_n ) \\
-		        &= \pi_k  \{ p_{z}^{m_n} (1-p_k)^{M - m_n} \} \{ \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} \} \\
+\gamma^*_{nk} &\propto p(z_{k} | x_n) \nonumber \\
+		        &\propto p(z_{k}) p(m_n | z_k, p_{z} ) p(x_n | m_n ) \nonumber \\
+		        &= \pi_k  \{ p_{z}^{m_n} (1-p_k)^{R - m_n} \} \{ \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} \}
 \end{align}
 
-where $M$ is the number of reads, both ALT and REF, at site $n$, and the asterisk over $\gamma^*_{nk}$ denotes that the responsibility is not normalized and thus is not a valid probability. We normalize each responsibility by dividing by the sum, as follows
+where $R$ is the number of reads at site $n$, and the asterisk over $\gamma^*_{nk}$ denotes that the responsibility is not normalized and thus is not a probability. We normalize each responsibility by dividing by their sum as below.
 
 \begin{align}
 \gamma_{nk} = \frac{\gamma^*_{nk}}{\sum_{k'} \gamma^*_{nk'}}
 \end{align}
 
 \subsubsection{M step}
-In the M step, we compute the expectation of the complete-data log likelihood with respect to the posterior distribution over $z$ (so $\E$ stands for $\E_{z \sim p(z|x,m)}$). Thus,
+In the M step, we compute the expectation of the complete-data log likelihood with respect to the posterior distribution over $z$ (so $\E$ stands for $\E_{Z \sim p(Z|X,M)}$). Thus,
 
 \begin{align}
-\E [ \ln p(X, M , Z | \vpi, \vp, \vtheta) ] &= \E [ \ln \prod_{n = 1}^{N}  p(Z) p(M | Z, p_{z} ) p(X | M ) ] \\
-							&= \E [ \ln \prod_{n = 1}^{N} \{ \prod_{k = 1}^{K} \pi_k^{z_{kn}} \} \{ \prod_{k = 1}^{K} ( p_k^{m_n} (1-p_k)^{M - m_n} ) ^{z_{nk}} \} ( \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} ) ] \notag \\
-							&= \E [ \ln \prod_{n = 1}^{N} \{ \prod_{k = 1}^{K} ( \pi_k  p_{k}^{m_n} (1-p_k)^{M - m_n} ) ^{z_{nk}} \} ( \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} ) ] \\
-							&= \E [ \sum_{n = 1}^{N} \sum_{k = 1}^{K} z_{nk} \{ \ln \pi_k  + m_n \ln p_k + (M - m_n) \ln (1-p_k) \} + \notag \\
-							&\phantom{---------------} x_n \ln \theta_k + (m_n - x_n) \ln (1 - \theta_k) ] \\
-							&= \sum_{n = 1}^{N} \sum_{k = 1}^{K} \gamma_{nk} \{ \ln \pi_k  + m_n \ln p_k + (M - m_n) \ln (1-p_k) \} + \notag \\
-							&\phantom{---------------} x_n \ln \theta_k + (m_n - x_n) \ln (1 - \theta_k)
+\E [ \ln p(X, M , Z | \vpi, \vp, \vtheta) ] &= \E [ \ln \prod_{n = 1}^{N}  p(Z) p(M | Z, p_{z} ) p(X | M, Z ) ] \nonumber \\
+							&= \E [ \ln \prod_{n = 1}^{N} \{ \prod_{k = 1}^{K} \pi_k^{z_{kn}} \} \{ \prod_{k = 1}^{K} ( p_k^{m_n} (1-p_k)^{R - m_n} ) ^{z_{nk}} \} \{ \prod_{k = 1}^{K} ( \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} )^{z_{nk}} \} ] \notag \\
+							&= \E [ \ln \prod_{n = 1}^{N} \prod_{k = 1}^{K} ( \pi_k  p_{k}^{m_n} (1-p_k)^{R - m_n} \theta_k^{x_n} (1 - \theta_k)^{m_n - x_n} )^{z_{nk}} ]  \nonumber \\
+							&= \E [ \sum_{n = 1}^{N} \sum_{k = 1}^{K} z_{nk} \{ \ln \pi_k  + m_n \ln p_k + (R - m_n) \ln (1-p_k) + \notag \\
+							&\phantom{---------------} x_n \ln \theta_k + (m_n - x_n) \ln (1 - \theta_k) \} ]  \nonumber \\
+							&= \sum_{n = 1}^{N} \sum_{k = 1}^{K} \gamma_{nk} \{ \ln \pi_k  + m_n \ln p_k + (R - m_n) \ln (1-p_k) + \notag \\
+						    &\phantom{---------------} x_n \ln \theta_k + (m_n - x_n) \ln (1 - \theta_k) \label{eq:expjointLL} \}
 \end{align} 
 
-where $K = |Z|$, and $X$ is the design matrix where each of $N$ row is $x_n$, and $\E z_{nk} = \gamma_{nk}$. We now take the derivative with respect to $\theta_k, p_k, \pi_k$ and set each equation to 0, which yields:
+where $K = |Z|$, $X$ is the design matrix whose $n$th row is $x_n$ ($M$ and $Z$ are defined analogously), and $\E [ z_{nk} ] = \gamma_{nk}$. We define the next three terms mainly for convenience but also because they have nice interpretations.
 
 \begin{align}
-\frac{\partial}{\partial \theta_k} &= \sum_n \frac{x_n}{\theta_k} - \frac{m_n - x_n}{1- \theta_k} \\
-					      &= \frac{N_k \bar{x}}{\theta_k} + \frac{N \bar{m} - N \bar{x}}{1- \theta_k} = 0
+N_k      &= \sum_n \gamma_{nk} \label{eq:nk} \\
+\bar{x}_k  &= \frac{1}{N_k} \sum_n \gamma_{nk} x_n \label{eq:xbar} \\
+\bar{m}_k &= \frac{1}{N_k} \sum_n \gamma_{nk} m_n \label{eq:mbar}
 \end{align}
 
-solving for $\theta_k$ we get
+$N_k$ is the effective number of samples that were in state $z = z_k$, while $\bar{x}_k$ and $\bar{m}_k$ are the sample means of $x$ and $m$ weighted by each sample's responsibility in explaining the $k$th component. We now take the derivative of (\ref{eq:expjointLL}) with respect to $\theta_k, p_k, \pi_k$ and set each equal to 0, which yields:
 
 \begin{align}
-\theta_k = 
+\frac{\partial}{\partial \theta_k} &= \sum_n \gamma_{nk} \Big( \frac{ x_n}{\theta_k} - \frac{m_n - x_n}{1- \theta_k} \Big)\\
+					      &= \frac{N_k \bar{x}_k}{\theta_k} - \frac{N_k \bar{m}_k - N_k \bar{x}_k}{1- \theta_k} = 0
 \end{align}
 
-where we defined
-
-START HERE: We definitely want $\theta$ to depend on $z$ directly.
+where we used (\ref{eq:xbar}) and (\ref{eq:mbar}). Solving for $\theta_k$, we get
 
 \begin{align}
-N_k      &= \sum_n \gamma_{nk} \\
-\bar{x}_k  &= \frac{1}{N_k} \sum_n \gamma_{nk} x_n \\
-\bar{m}_k &= \frac{1}{N_k} \sum_n \gamma_{nk} m_n 
+\hat{\theta}_k = \frac{\bar{x}_k}{\bar{m}_k} \label{eq:theta}
 \end{align}
+
+Derivative with respect to $p_k$ is completely analogous. In the end, we get
+
+\begin{align}
+\hat{p}_k = \frac{\bar{m}_k}{R} \label{eq:p}
+\end{align}
+
+Finally we take the derivative with respect to $\pi_k$ under the constraint $\sum_k \pi_k = 1$. Using a Lagrange multiplier to account for the constraint, we get
+
+\begin{align}
+\frac{\partial}{\partial \pi_k} \{ \E [ \ln p(X, M , Z | \vpi, \vp, \vtheta) ] + \lambda ( \sum_k \pi_k - 1)\} &= \sum_n \frac{\gamma_{nk}}{\pi_k} + \lambda \nonumber \\
+																   &= \frac{N_k}{\pi_k} + \lambda = 0 \label{eq:dpi}
+\end{align}
+
+where $\lambda$ is the Lagrange multiplier. Rearranging (\ref{eq:dpi}) and summing over $k$, we get
+
+\begin{align*}
+\sum_k N_k &= \sum_k - \lambda \pi_k \\
+      \lambda &= - N 
+\end{align*}
+
+Plugging in for $\lambda$ in (\ref{eq:dpi}) we obtain
+
+\begin{equation}
+\hat{\pi}_k = \frac{N_k}{N}
+\end{equation}
+
+% TODO: Discuss the forms of these update equations
+% Initialize parameters, and iterate E and M-steps.
+
 
 
 %%%%%%%%%%
