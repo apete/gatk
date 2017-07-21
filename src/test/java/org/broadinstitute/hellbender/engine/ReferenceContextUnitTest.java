@@ -9,6 +9,7 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -227,6 +228,28 @@ public final class ReferenceContextUnitTest extends BaseTest {
             SimpleInterval interval = new SimpleInterval("1", 5, 10);
             ReferenceContext refContext = new ReferenceContext(reference, interval);
             refContext.setWindow(windowStartOffset, windowStopOffset);
+        }
+    }
+
+    @DataProvider(name = "SubintervalDataProvider")
+    public Object[][] getSubintervals() {
+        return new Object[][] {
+                {11210, 11220, "CGGTGCTGTG"},
+                {11210, 11211, "C"},
+                {11217, 11220, "GTG"},
+                {11220, 11221, "C"}
+        };
+    }
+
+    @Test(dataProvider = "SubintervalDataProvider")
+    public void testGetBasesInInterval(int start, int end, String expectedSubsequence){
+        // the interval of a ReferenceContext object is *in*clusive on both ends
+        final int intervalStart = 11210;
+        final int intervalEnd = 11220;
+        try (ReferenceDataSource reference = new ReferenceFileSource(TEST_REFERENCE)) {
+            final SimpleInterval interval = new SimpleInterval("1", intervalStart, intervalEnd);
+            ReferenceContext refContext = new ReferenceContext(reference, interval);
+            Assert.assertTrue(Arrays.equals(refContext.getBasesInInterval(start, end), expectedSubsequence.getBytes()));
         }
     }
 }

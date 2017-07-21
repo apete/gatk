@@ -6,6 +6,7 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.iterators.ByteArrayIterator;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -312,5 +313,23 @@ public final class ReferenceContext implements Iterable<Byte> {
      */
     public byte getBase() {
         return getBases()[interval.getStart() - window.getStart()];
+    }
+
+    /**
+     * Get the bases within a specified range without altering the internal state of the object
+     *
+     * @param start start position inclusive
+     * @param end end position exclusive
+     * @return bases in the reference within the range [start, end)
+     */
+    public byte[] getBasesInInterval(final int start, final int end){
+        // TODO: add test
+        Utils.validateArg(window.getStart() <= start && start <= window.getEnd(), () -> "start position must fall within the window");
+        Utils.validateArg(window.getStart() < end && end <= window.getEnd() + 1, () -> "end position must fall within the window");
+        Utils.validateArg(start < end, "start position must be smaller than end position");
+
+        final int startIndex = start - window.getStart();
+        final int endIndex = end - window.getStart();
+        return Arrays.copyOfRange(getBases(), startIndex, endIndex);
     }
 }
