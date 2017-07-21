@@ -35,8 +35,6 @@ import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.StreamSupport;
 
 /**
  * Created by davidben on 9/15/16.
@@ -50,6 +48,10 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
     private static final Logger logger = LogManager.getLogger(Mutect2Engine.class);
     private final static List<VariantContext> NO_CALLS = Collections.emptyList();
+    public static final int INDEL_START_QUAL = 30;
+    public static final int INDEL_CONTINUATION_QUAL = 10;
+    public static final double MAX_ALT_FRACTION_IN_NORMAL = 0.3;
+    public static final int MAX_NORMAL_QUAL_SUM = 100;
 
 
     private M2ArgumentCollection MTAC;
@@ -300,7 +302,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
             final Pair<Integer, Double> normalAltCountAndQualSum = altCountAndQualSum(normalPileup, refBase);
             final int normalAltCount = normalAltCountAndQualSum.getFirst();
             final double normalQualSum = normalAltCountAndQualSum.getSecond();
-            if (normalAltCount > normalPileup.size() * 0.3 && normalQualSum > 100) {
+            if (normalAltCount > normalPileup.size() * MAX_ALT_FRACTION_IN_NORMAL && normalQualSum > MAX_NORMAL_QUAL_SUM) {
                 return new ActivityProfileState(refInterval, 0.0);
             }
         } else {
@@ -310,7 +312,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
             }
         }
 
-        if (!MTAC.genotype_pon_sites && !featureContext.getValues(MTAC.pon, new SimpleInterval(context.getContig(), (int) context.getPosition(), (int) context.getPosition())).isEmpty()) {
+        if (!MTAC.genotypePonSites && !featureContext.getValues(MTAC.pon, new SimpleInterval(context.getContig(), (int) context.getPosition(), (int) context.getPosition())).isEmpty()) {
             return new ActivityProfileState(refInterval, 0.0);
         }
 
@@ -322,7 +324,7 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
     }
 
     private static double indelQual(final int indelLength) {
-        return 20 + indelLength * 10;
+        return INDEL_START_QUAL + (indelLength - 1) * INDEL_CONTINUATION_QUAL;
     }
 
     private static Pair<Integer, Double> altCountAndQualSum(final ReadPileup pileup, final byte refBase) {
