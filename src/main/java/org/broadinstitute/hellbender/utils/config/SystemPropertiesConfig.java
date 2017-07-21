@@ -27,8 +27,9 @@ public interface SystemPropertiesConfig extends Mutable, Accessible {
     // =================================================================================
 
     @Key("samjdk.use_async_io_read_samtools")
+    @ConverterClass(CustomBooleanConverter.class)
     @DefaultValue("false")
-    boolean samjdk_use_async_io_read_samtools();
+    Boolean samjdk_use_async_io_read_samtools();
 
     @Key("samjdk.use_async_io_write_samtools")
     @DefaultValue("true")
