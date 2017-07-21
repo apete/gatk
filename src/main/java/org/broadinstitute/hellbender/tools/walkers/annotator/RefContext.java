@@ -34,10 +34,7 @@ public class RefContext extends InfoFieldAnnotation {
         Utils.nonNull(likelihoods);
 
         final int k = 3;
-        SimpleInterval oldWindow = ref.getWindow();
-        ref.setWindow(k/2, k/2);
-        final byte[] refContext = ref.getBases();
-
-        return Collections.singletonMap(getKeyNames().get(0), refContext); // String.format("%d", )
+        final byte[] referenceBases = ref.getBasesInInterval(vc.getStart() - k/2, vc.getStart() + k/2 + 1);
+        return Collections.singletonMap(getKeyNames().get(0), new String(referenceBases));
     }
 }

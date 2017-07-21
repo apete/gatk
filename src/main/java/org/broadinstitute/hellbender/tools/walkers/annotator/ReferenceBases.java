@@ -20,7 +20,7 @@ import java.util.Map;
 public class ReferenceBases extends InfoFieldAnnotation {
     public static final String REFERENCE_BASES_KEY = "REF_BASES";
 
-    public static final int NUM_BASES_ON_EITHER_SIDE = 10;
+    public static final int NUM_BASES_ON_EITHER_SIDE = 3;
 
     @Override
     public List<String> getKeyNames() { return Collections.singletonList(REFERENCE_BASES_KEY); }
