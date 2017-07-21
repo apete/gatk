@@ -22,9 +22,6 @@ import static org.broadinstitute.hellbender.tools.walkers.annotator.StrandArtifa
  * Created by tsato on 4/19/17.
  */
 public class StrandArtifact extends GenotypeAnnotation implements StandardSomaticAnnotation {
-    public static final String POSTERIOR_PROBABILITIES_KEY = "SA_POST_PROB";
-    public static final String MAP_ALLELE_FRACTIONS_KEY = "SA_MAP_AF";
-
     // pseudocounts for the beta distribution over epsilon
     // alpha > 0 and beta > 0. alpha = beta = 1 gives us the flat prior
     // give more prior weight to beta (i.e. pseudocount for tails) so that the peak shifts towards 0
@@ -41,7 +38,7 @@ public class StrandArtifact extends GenotypeAnnotation implements StandardSomati
 
     @Override
     public List<String> getKeyNames() {
-        return Arrays.asList(POSTERIOR_PROBABILITIES_KEY, MAP_ALLELE_FRACTIONS_KEY);
+        return Arrays.asList(GATKVCFConstants.POSTERIOR_PROBABILITIES_KEY, GATKVCFConstants.MAP_ALLELE_FRACTIONS_KEY);
     }
 
     @Override
@@ -134,14 +131,14 @@ public class StrandArtifact extends GenotypeAnnotation implements StandardSomati
         // In the absence of strand artifact, MAP estimate for f reduces to the sample alt allele fraction
         maximum_a_posteriori_allele_fraction_estimates.put(NO_ARTIFACT,  (double) numAltReads/numReads);
 
-        gb.attribute(POSTERIOR_PROBABILITIES_KEY, posterior_probabilities);
-        gb.attribute(MAP_ALLELE_FRACTIONS_KEY, maximum_a_posteriori_allele_fraction_estimates.values().stream().mapToDouble(Double::doubleValue).toArray());
+        gb.attribute(GATKVCFConstants.POSTERIOR_PROBABILITIES_KEY, posterior_probabilities);
+        gb.attribute(GATKVCFConstants.MAP_ALLELE_FRACTIONS_KEY, maximum_a_posteriori_allele_fraction_estimates.values().stream().mapToDouble(Double::doubleValue).toArray());
     }
 
     @Override
     public List<VCFFormatHeaderLine> getDescriptions() {
-        return Arrays.asList(new VCFFormatHeaderLine(POSTERIOR_PROBABILITIES_KEY, 3, VCFHeaderLineType.Float, "posterior probabilities of the presence of strand artifact"),
-                new VCFFormatHeaderLine(MAP_ALLELE_FRACTIONS_KEY, 3, VCFHeaderLineType.Float, "MAP estimates of allele fraction given z"));
+        return Arrays.asList(new VCFFormatHeaderLine(GATKVCFConstants.POSTERIOR_PROBABILITIES_KEY, 3, VCFHeaderLineType.Float, "posterior probabilities of the presence of strand artifact"),
+                new VCFFormatHeaderLine(GATKVCFConstants.MAP_ALLELE_FRACTIONS_KEY, 3, VCFHeaderLineType.Float, "MAP estimates of allele fraction given z"));
     }
 
     private double getIntegrandGivenNoArtifact(final double f, final int nPlus, final int nMinus, final int xPlus, final int xMinus){
