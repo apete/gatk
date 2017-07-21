@@ -25,3 +25,4 @@ ENV CI true
 RUN echo "cd /gatk/ && ./gradlew test" >/root/run_unit_tests.sh
 
 WORKDIR /gatk
+RUN cp -r . /gatk
