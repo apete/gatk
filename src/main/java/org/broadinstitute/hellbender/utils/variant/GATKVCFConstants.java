@@ -108,6 +108,7 @@ public final class GATKVCFConstants {
     public static final String POPULATION_AF_VCF_ATTRIBUTE =        "POP_AF";
     public static final String GERMLINE_POSTERIORS_VCF_ATTRIBUTE =  "P_GERMLINE";
     public static final String REFERENCE_CONTEXT_KEY =              "REF_CONTEXT";
+    public static final String ALT_READ_F1R2_COUNT_KEY =            "ALT_F1R2";
     public static final List<String> STANDARD_MUTECT_INFO_FIELDS = Arrays.asList(NORMAL_LOD_KEY, TUMOR_LOD_KEY, NORMAL_ARTIFACT_LOD_ATTRIBUTE,
             EVENT_COUNT_IN_HAPLOTYPE_KEY, IN_PON_VCF_ATTRIBUTE, POPULATION_AF_VCF_ATTRIBUTE, GERMLINE_POSTERIORS_VCF_ATTRIBUTE, REFERENCE_CONTEXT_KEY);
 

@@ -176,5 +176,6 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(GERMLINE_POSTERIORS_VCF_ATTRIBUTE, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "Posterior probability for alt allele to be germline variants"));
         addInfoLine(new VCFInfoHeaderLine(NORMAL_ARTIFACT_LOD_ATTRIBUTE, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "log odds of artifact in normal with same allele fraction as tumor"));
         addInfoLine(new VCFInfoHeaderLine(REFERENCE_CONTEXT_KEY, 1, VCFHeaderLineType.String, "k-mer in the reference context with the variant in the middle"));
+        addInfoLine(new VCFInfoHeaderLine(ALT_READ_F1R2_COUNT_KEY, 1, VCFHeaderLineType.Integer, "Count of F1R2 alt reads"));
     }
 }

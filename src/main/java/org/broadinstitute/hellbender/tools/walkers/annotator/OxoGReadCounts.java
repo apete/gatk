@@ -10,6 +10,7 @@ import org.broadinstitute.hellbender.utils.QualityUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
@@ -79,7 +80,7 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
 
         for (final ReadLikelihoods<Allele>.BestAllele bestAllele : likelihoods.bestAlleles(g.getSampleName())) {
             final GATKRead read = bestAllele.read;
-            if (bestAllele.isInformative() && isUsableRead(read) && read.isPaired()) {
+            if (bestAllele.isInformative() && ReadUtils.readHasReasonableMQ(read) && read.isPaired()) {
                 final Allele allele = bestAllele.allele;
                 if (allele.equals(ref, true)) {
                     if (read.isReverseStrand() == read.isFirstOfPair()) {
@@ -111,9 +112,5 @@ public final class OxoGReadCounts extends GenotypeAnnotation {
         gb.attribute(GATKVCFConstants.OXOG_REF_F1R2_KEY, ref_F1R2);
         gb.attribute(GATKVCFConstants.OXOG_REF_F2R1_KEY, ref_F2R1);
         gb.attribute(GATKVCFConstants.OXOG_FRACTION_KEY, fraction);
-    }
-
-    protected static boolean isUsableRead(final GATKRead read) {
-        return read.getMappingQuality() != 0 && read.getMappingQuality() != QualityUtils.MAPPING_QUALITY_UNAVAILABLE;
     }
 }
