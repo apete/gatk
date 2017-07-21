@@ -19,7 +19,7 @@ import java.util.List;
 
 public class BreakpointEvidenceTest extends BaseTest {
     private final static FragmentLengthStatistics stats =
-            new FragmentLengthStatistics(IntHistogramTest.genLogNormalSample(400, 171, 10000));
+            new FragmentLengthStatistics(IntHistogramTest.genLogNormalSample(400, 170, 10000));
 
     @Test(groups = "sv")
     void restOfFragmentSizeReverseReadTest() {
