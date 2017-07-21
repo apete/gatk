@@ -364,8 +364,8 @@ public final class BucketUtils {
     }
 
     private static StorageOptions.Builder setGenerousTimeouts(StorageOptions.Builder builder) {
-        return builder
-            .setTransportOptions(HttpTransportOptions.newBuilder()
+        return null; //builder
+            /*.setTransportOptions(HttpTransportOptions.newBuilder()
                 .setConnectTimeout(120000)
                 .setReadTimeout(120000)
                 .build())
@@ -378,7 +378,7 @@ public final class BucketUtils {
                 .setInitialRpcTimeout(Duration.ofMillis(180_000L))
                 .setRpcTimeoutMultiplier(1.0)
                 .setMaxRpcTimeout(Duration.ofMillis(180_000L))
-                .build());
+                .build());*/
     }
 
     /**
@@ -395,7 +395,7 @@ public final class BucketUtils {
         StorageOptions.Builder builder = StorageOptions.newBuilder()
                 .setProjectId(projectId);
         if (null != credentials) {
-            builder = builder.setCredentials(GoogleCredentials.fromStream(new ByteArrayInputStream(credentials)));
+            //builder = builder.setCredentials(GoogleCredentials.fromStream(new ByteArrayInputStream(credentials)));
         }
         // generous timeouts, to avoid tests failing when not warranted.
         StorageOptions storageOptions = setGenerousTimeouts(builder).build();
